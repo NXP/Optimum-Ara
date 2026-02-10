@@ -816,7 +816,9 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
         if generation_config.ara.target_prompt_post_mcp:
             valid_tokens = output_array[:1].copy().astype("int32")
         else:
-            if generation_config.do_sample:
+            if custom_logits_processor:
+                valid_tokens = custom_logits_processor(input_ids=[], scores=output_array, new_prompt=True)
+            elif generation_config.do_sample:
                 # Apply MCP on the output logits
                 logits_torch = (
                     torch.from_numpy(output_array[:vocab_size]).float().unsqueeze(0)
@@ -900,7 +902,9 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             if generation_config.ara.target_token_post_mcp:
                 valid_tokens = output_array[:num_valid_tokens]
             else:
-                if generation_config.do_sample:
+                if custom_logits_processor:
+                    valid_tokens = custom_logits_processor(input_ids=[], scores=output_array)
+                elif generation_config.do_sample:
                     # Apply MCP on the output logits
                     logits_torch = (
                         torch.from_numpy(output_array[:vocab_size]).float().unsqueeze(0)
