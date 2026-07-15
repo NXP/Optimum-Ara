@@ -1,0 +1,11 @@
+{
+  "ara": {
+    "dvm_path": "models/llama2-7b/assets/model.dvm",
+    "interface_ip_address": "127.0.0.1",
+    "interface_named_pipe": "//./pipe/proxy_pipe",
+    "interface_port": 5000,
+    "interface_socket_file": "/var/run/proxy.sock",
+    "interface_type": "SOCKET"
+  },
+  "model_type": "ara_llama"
+}

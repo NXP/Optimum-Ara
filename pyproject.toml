@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project]
+name = "optimum-ara"
+version = "1.0.0"
+description = "Optimum Library for Ara Integration"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "librosa==0.11.0",
+    "numpy==2.4.3",
+    "pillow==12.1.1",
+    "pydantic==2.12.5",
+    "pyyaml==6.0.3",
+    "qwen-vl-utils==0.0.14",
+    "soundfile==0.13.1",
+    "torch==2.9.0",
+    "torchvision==0.24.0",
+    "transformers==4.57.6",
+]
+license = "Apache-2.0"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "pyrefly>=0.50.1",
+    "ruff>=0.11",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["optimum"]
+sbom-files = ["SBOM-optimum-ara-1.0.0.spdx.json"]
+
+[tool.hatch.build.targets.sdist]
+include = ["optimum", "SBOM-optimum-ara-1.0.0.spdx.json"]
+
+[tool.pyrefly]
+project-includes = ["optimum/**/*.py", "testapp/**/*.py", "tests/**/*.py", "ci/**/*.py", "examples/**/*.py", "scripts/**/*.py"]
+search-path = [".", "ci"]
+ignore-missing-imports = ["dvapi", "optimum.ara.api.dvapi", "handlers", "ollama", "faiss", "cv2", "gradio", "openpyxl", "openpyxl.*"]
+
+[[tool.pyrefly.sub-config]]
+matches = "ci/**"
+[tool.pyrefly.sub-config.errors]
+unsupported-operation = false
+
+[[tool.pyrefly.sub-config]]
+matches = "tests/test_llava.py"
+[tool.pyrefly.sub-config.errors]
+missing-attribute = false
+bad-assignment = false
+bad-argument-type = false
+
+[[tool.pyrefly.sub-config]]
+matches = "scripts/gen_stress_test_summary.py"
+[tool.pyrefly.sub-config.errors]
+bad-assignment = false
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "C4", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.coverage.run]
+omit = [
+"*/optimum/ara/utils/config.py",
+"**/dvapi.py"
+]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.coverage.html]
+directory = "htmlcov"

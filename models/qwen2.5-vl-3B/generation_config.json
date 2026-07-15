@@ -1,0 +1,15 @@
+{
+  "ara": {
+    "target_prompt_post_mcp": 0,
+    "target_prompt_pre_mcp": 0,
+    "target_token_post_mcp": 0,
+    "target_token_pre_mcp": 0
+  },
+  "do_sample": false,
+  "max_length": 512,
+  "pad_token_id": 0,
+  "bos_token_id": 1,
+  "eos_token_id": 151645,
+  
+  "length_penalty": 1.0
+}

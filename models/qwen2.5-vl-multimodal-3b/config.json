@@ -1,0 +1,25 @@
+{
+  "ara": {
+    "dvm_path": "/users/kapil/qwen2_5_vl/qwen2_5_vl_decoder_eqat_rotated_2_13_seconds_3b_r1.3_final.dvm",
+    "interface_ip_address": "127.0.0.1",
+    "interface_named_pipe": "//./pipe/proxy_pipe",
+    "interface_port": 5000,
+    "interface_socket_file": "/var/run/proxy.sock",
+    "interface_type": "SOCKET",
+    "vision_model_path": "/users/kapil/qwen2_5_vl/vision_encoder_3b_r1.2.dvm",
+    "input_scale_path": "/users/kapil/llm_app/qwen2_5_vl_variable_length/llm_app/inputs/layer1-input_0_scale-1_input_dv.dat",
+    "rope_table_path": "/users/kapil/llm_app/qwen2_5_vl_variable_length/llm_app/inputs/layer2-rope_table-2_input_dv.dat"
+  },
+  "architectures": [
+    "Qwen2_5_VLForConditionalGeneration"
+  ],
+  "bos_token_id": 151643,
+  "eos_token_id": 151645,
+  "vision_token_id": 151654,
+  "image_token_id": 151655,
+  "video_token_id": 151656,
+  "max_position_embeddings": 128000,
+  "model_type": "ara_qwen_multimodal",
+  "transformers_version": "4.41.2",
+  "use_cache": true
+}

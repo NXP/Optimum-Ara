@@ -1,0 +1,17 @@
+{
+  "ara": {
+    "target_prompt_post_mcp": 0,
+    "target_prompt_pre_mcp": 1,
+    "target_token_post_mcp": 0,
+    "target_token_pre_mcp": 1
+  },
+  "bos_token_id": 151643,
+  "do_sample": false,
+  "eos_token_id": [
+    151645,
+    151643
+  ],
+  "pad_token_id": 151643,
+  "max_length": 512,
+  "transformers_version": "4.42.0"
+}

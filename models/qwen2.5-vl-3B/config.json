@@ -1,0 +1,16 @@
+{
+    "ara": {
+      "dvm_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/stage_r1.3_t3/qwen2.5_vl_3b/model.dvm",
+      "interface_ip_address": "127.0.0.1",
+      "interface_named_pipe": "//./pipe/proxy_pipe",
+      "interface_port": 5000,
+      "interface_socket_file": "/var/run/proxy.sock",
+      "interface_type": "SOCKET",
+      "vision_model_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/stage_r1.3_t3/qwen2.5_vl_3b/vision_encoder/model.dvm",
+      "input_scale_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/common/qwen2.5-vl-3B-video/inputs/layer1-input_0_scale-1_input_dv.dat",
+      "rope_table_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/common/qwen2.5-vl-3B-video/inputs/layer2-rope_table-2_input_dv.dat"
+    },
+    "model_type": "ara_qwen_vl",
+    "video_token_id": 151656,
+    "image_token_id": 151655
+}

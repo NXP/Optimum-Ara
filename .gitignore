@@ -1,0 +1,33 @@
+# Python
+.venv
+__pycache__
+.pytest_cache
+.coverage
+coverage*
+.ruff_cache
+
+# Build/Distribution
+dist
+
+# Project directories
+outputs
+golden
+local_models
+output_model1/
+
+# Models
+models/*/model.dvm
+../3rdparty/tokenizers-cpp
+
+# IDE
+.vscode
+
+# Media files
+examples/personFalling_8.mov_cropped.mp4
+
+# Scripts
+run.sh
+uv.lock
+
+# Exceptions (keep these files)
+!tests/models/unit-test-llama2-7b/assets/
