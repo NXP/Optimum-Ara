@@ -2,8 +2,10 @@
 
 # Optimum Ara
 
-[![python](https://img.shields.io/badge/Python->=3.12-green)](https://www.python.org/downloads/release/python-31013/)
 [![license](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE.txt)
+[![python](https://img.shields.io/badge/Python->=3.12-green)](https://www.python.org/downloads/release/python-31013/)
+![optimum-ara-version](https://img.shields.io/badge/Optimum--Ara-v1.0.0-orange)
+![sdk-version](https://img.shields.io/badge/Ara%20SDK-r2.1.1-yellow)
 
 ---
 <div align="left">
@@ -20,6 +22,7 @@
   - [Run Example with Optimum-Ara](#run-example-with-optimum-ara)
   - [API Documentation](#api-documentation)
   - [Examples](#examples)
+  - [Release Notes](#release-notes)
   - [License](#license)
 
 ---
@@ -231,13 +234,19 @@ This section shows you how to run an example using Optimum-Ara after installatio
 
 Optimum Ara provides configuration and model classes inspired by Hugging Face Transformers.
 
-For more info check [api documentation](./docs/optimum-ara-apis.md)
+For more info check [API Documentation](./docs/optimum-ara-apis.md).
 
 ## Examples
 
 Examples provide a quick way to start using Optimum Ara.
 
-For more info check [example readme](./examples/Readme.md)
+For more info check the [README.md](./examples/Readme.md) inside of `examples/`.
+
+## Release Notes
+
+| Optimum-Ara Version | Ara SDK Version | i.MX BSP Version |
+| ------------------- | --------------- | ---------------- |
+| 1.0.0               | r2.1.1          | lf-6.18.20_2.0.0 |
 
 ## License
 
