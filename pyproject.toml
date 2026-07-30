@@ -7,7 +7,7 @@ allow-direct-references = true
 
 [project]
 name = "optimum-ara"
-version = "1.0.0"
+version = "1.0.1"
 description = "Optimum Library for Ara Integration"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -41,10 +41,10 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["optimum"]
-sbom-files = ["SBOM-optimum-ara-1.0.0.spdx.json"]
+sbom-files = ["SBOM-optimum-ara-1.0.1.spdx.json"]
 
 [tool.hatch.build.targets.sdist]
-include = ["optimum", "SBOM-optimum-ara-1.0.0.spdx.json"]
+include = ["optimum", "SBOM-optimum-ara-1.0.1.spdx.json"]
 
 [tool.pyrefly]
 project-includes = ["optimum/**/*.py", "testapp/**/*.py", "tests/**/*.py", "ci/**/*.py", "examples/**/*.py", "scripts/**/*.py"]

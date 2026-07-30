@@ -8,14 +8,14 @@
     ],
     "licenseListVersion": "3.26"
   },
-  "name": "optimum-ara-1.0.0",
+  "name": "optimum-ara-1.0.1",
   "dataLicense": "CC0-1.0",
   "documentNamespace": "https://nxp.com/spdx/03e2232e-2d12-4dcf-8157-bcd9f300f422",
   "packages": [
     {
       "SPDXID": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422",
       "name": "optimum-ara",
-      "versionInfo": "1.0.0",
+      "versionInfo": "1.0.1",
       "licenseConcluded": "(Apache-2.0)",
       "licenseDeclared": "(Apache-2.0)",
       "downloadLocation": "https://github.com/NXP/optimum-ara",
