@@ -1,0 +1,38 @@
+{
+  "ara": {
+    "dvm_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/llava_llama_3.1_8b_4k_nonspecd_unpack_internal/model.dvm",
+    "vision_model_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/vit_internal/model.dvm",
+    "vision_input_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/vit_internal/inputs/layer0-onnx__Cast_0-0_input_dv.dat",
+    "vision_input_scale_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/vit_internal/inputs/layer1-onnx__Cast_0_scale-1_input_dv.dat",
+    "vision_add_input_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/vit_internal/inputs/layer2-dv_Add_input-2_input_dv.dat",
+    "vision_add_input_scale_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/vit_internal/inputs/layer3-dv_Add_input_scale-3_input_dv.dat",
+    "vision_concat_input_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/vit_internal/inputs/layer4-dv_concat_input-4_input_dv.dat",
+    "vision_concat_input_scale_path": "/auto/share/releases/sdk/ara2/demo_releases/standalone_demos/assets/llm/jenkins-llm_internal_flow-43/vit_internal/inputs/layer5-dv_concat_input_scale-5_input_dv.dat",
+    "inference_device": "ARA2",
+    "interface_ip_address": "127.0.0.1",
+    "interface_named_pipe": "//./pipe/proxy_pipe",
+    "interface_port": 5000,
+    "interface_socket_file": "/var/run/proxy.sock",
+    "interface_type": "SOCKET"
+  },
+  "architectures": [
+    "LlavaForConditionalGeneration"
+  ],
+  "num_max_tokens": 4096,
+  "num_embeddings_per_token": 4096,
+  "num_total_tokens": 128320,
+  "pad_token_id": 128009,
+  "eos_token_id": 128009,
+  "bos_token_id": 128000,
+  "image_token_id": 128256,
+  "num_repeat_ngram_size": 2,
+  "ngram_panalty": 10,
+  "apply_repetition_penalty": true,
+  "generation_mode": "greedy_search",
+  "temperature": 0.7,
+  "top_k": 40,
+  "top_p": 0.9,
+  "num_max_iterations": 2048,
+  "use_chat_template": false,
+  "model_type": "ara_llava"
+}

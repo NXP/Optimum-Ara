@@ -4,18 +4,16 @@
 
 import logging
 import os
-import logging
-from glob import glob
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Optional, Tuple, Union, cast
 
 import numpy as np
 import torch
-from PIL import Image
-from transformers import AutoProcessor
-from transformers import Qwen2_5_VLProcessor
+from transformers import GenerationConfig
+from transformers.generation.logits_process import LogitsProcessorList
+from transformers.generation.stopping_criteria import StoppingCriteriaList
+from transformers.generation.streamers import BaseStreamer
+from transformers.generation.utils import GenerateDecoderOnlyOutput
 
-from ...configuration_utils import AraConfig
 from ...generation.configuration_utils import AraGenerationConfig
 from ...modeling_visual_language import AraModelForVisualCausalLM
 from .configuration_qwen2_5_vl import (
@@ -23,7 +21,6 @@ from .configuration_qwen2_5_vl import (
     AraQwen2_5MultiModalConfig,
     AraQwen2_5VLConfig,
 )
-from ...utils.utils import dequantize, quantize
 
 
 class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
@@ -111,6 +108,7 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
         vision_inputs_np = vision_inputs.cpu().detach().numpy()
         # breakpoint()
         for i in range(num_frames // 2):
+            # before flatten : shape=(576, <# of input tokens>)
             pixel_values_np = (
                 np.clip(
                     (
@@ -128,6 +126,7 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
                 .astype(np.int8)
                 .flatten()
             )  # check scale
+
             frame_embeds, frame_scales = self.vision_encoder_runner(pixel_values_np)
             frame_embeds = frame_embeds.reshape(
                 self.NUM_TKNS_PER_FRAME,
@@ -162,6 +161,63 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
         vision_output = outputs[0]
 
         return (vision_output, vision_output_scale)
+
+    def generate(
+        self,
+        inputs: Optional[torch.Tensor] = None,
+        generation_config: Optional[
+            Union[GenerationConfig, AraGenerationConfig]
+        ] = None,
+        logits_processor: Optional[LogitsProcessorList] = None,
+        stopping_criteria: Optional[StoppingCriteriaList] = None,
+        prefix_allowed_tokens_fn: Optional[Any] = None,
+        synced_gpus: Optional[bool] = None,
+        assistant_model: Optional[Any] = None,
+        streamer: Optional[BaseStreamer] = None,
+        negative_prompt_ids: Optional[torch.Tensor] = None,
+        negative_prompt_attention_mask: Optional[torch.Tensor] = None,
+        use_model_defaults: Optional[bool] = None,
+        custom_generate: Optional[Union[str, Callable]] = None,
+        **kwargs,
+    ) -> Union[GenerateDecoderOnlyOutput, torch.LongTensor, Any]:
+        input_ids = kwargs.pop("input_ids", None)
+        input_ids = inputs if inputs is not None else cast(torch.Tensor, input_ids)
+
+        # checking if system prompt is hardcoded
+        SYSTEM_PROMPT_ID = torch.tensor(
+            [151644, 8948, 198, 2610, 525, 264, 10950, 17847, 13], dtype=torch.int64
+        )
+        curr_sys_prompt_len = (
+            (input_ids[0] == 151645).nonzero(as_tuple=True)[0][0].item()
+        )
+        if not torch.equal(
+            input_ids[:, :curr_sys_prompt_len].squeeze(0), SYSTEM_PROMPT_ID
+        ):
+            logging.info("Updating system prompt to 'You are a helpful assistant'")
+            input_ids = torch.cat(
+                [
+                    SYSTEM_PROMPT_ID.unsqueeze(0),
+                    input_ids[:, curr_sys_prompt_len:],
+                ],
+                dim=1,
+            )
+
+        kwargs.update({"input_ids": input_ids})
+        return super().generate(
+            inputs,
+            generation_config,
+            logits_processor,
+            stopping_criteria,
+            prefix_allowed_tokens_fn,
+            synced_gpus,
+            assistant_model,
+            streamer,
+            negative_prompt_ids,
+            negative_prompt_attention_mask,
+            use_model_defaults,
+            custom_generate,
+            **kwargs,
+        )
 
 
 class AraQwen2_5_ImageForConditionalGeneration(AraQwen2_5_VLForConditionalGeneration):

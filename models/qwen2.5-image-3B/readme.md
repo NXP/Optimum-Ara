@@ -24,7 +24,9 @@ from PIL import Image
 from optimum.ara import AraQwen2_5_ImageForConditionalGeneration
 
 # Load model and processor
-model = AraQwen2_5_ImageForConditionalGeneration.from_pretrained("./models/qwen2.5-image-3B")
+model = AraQwen2_5_ImageForConditionalGeneration.from_pretrained(
+    "./models/qwen2.5-image-3B"
+)
 processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-3B-Instruct")
 
 
@@ -66,7 +68,7 @@ outputs = model.generate(
     max_new_tokens=512,
     temperature=1.0,
     do_sample=False,
-    stream=False
+    stream=False,
 )
 
 response = processor.decode(result, skip_special_tokens=True)
@@ -76,6 +78,7 @@ print(response)
 ## Configuration
 
 The model uses the same two-model architecture as LLaVA:
+
 1. **Vision Model**: ViT DVM for image feature extraction
 2. **Language Model**: Qwen 2.5 DVM for text generation
 
@@ -85,4 +88,4 @@ Both models are loaded from the paths specified in the configuration.
 
 - Ara hardware with DVM support
 - Vision and language model DVM files
-- Required bin files for vision encoding constants 
+- Required bin files for vision encoding constants

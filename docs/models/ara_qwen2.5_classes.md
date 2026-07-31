@@ -3,18 +3,13 @@
 Qwen2.5-VL is a multimodal large language model from Qwen series that can understand both text and images. It supports tasks like visual question answering, image captioning, and document understanding, handling complex visual inputs.
 
 We have added three Qwen 2.5VL specific classes.
-- [Qwen 2.5VL Model Classes](#qwen-25vl-model-classes)
-  - [AraQwen2\_5VLConfig](#araqwen2_5vlconfig)
-    - [Config Parameters:](#config-parameters)
-    - [Example:](#example)
-  - [AraQwen2\_5\_VLForConditionalGeneration](#araqwen2_5_vlforconditionalgeneration)
-    - [Example:](#example-1)
-  - [QwenVLProcessor](#qwenvlprocessor)
-    - [Example](#example-2)
-  - [AraQwen2\_5ImageConfig](#araqwen2_5imageconfig)
-    - [AraQwen2\_5\_ImageForConditionalGeneration](#araqwen2_5_imageforconditionalgeneration)
+
+- [AraQwen2_5VLConfig](#araqwen2_5vlconfig)
+- [AraQwen2_5_VLForConditionalGeneration](#araqwen2_5_vlforconditionalgeneration)
+- [Qwen2_5_VLProcessor](#Qwen2_5_VLProcessor)
 
 We have added two Qwen 2.5V Image specific classes.
+
 - [AraQwen2_5ImageConfig](#araqwen2_5imageconfig)
 - [AraQwen2_5_ImageForConditionalGeneration](#araqwen2_5_imageforconditionalgeneration)
 
@@ -22,14 +17,15 @@ We have added two Qwen 2.5V Image specific classes.
 
 **AraQwen2_5VLConfig** extends **AraPretrainedConfig** with AraQwen2.5-vl model specific config params.
 Following config params are addition to params already present in **AraPretrainedConfig**
+
 ```json
 {
-"ara": {
+  "ara": {
     "vision_model_path": "./models/qwen2.5_vl/vision_encoder/model.dvm",
     "input_scale_path": "./models/qwen2.5_vl/vision_encoder/inputs/layer1-input_0_scale-1_input_dv.dat",
     "rope_table_path": "./models/qwen2.5_vl/vision_encoder/inputs/layer2-rope_table-2_input_dv.dat"
-    },
-"model_type": "ara_qwen_vl",
+  },
+  "model_type": "ara_qwen_vl"
 }
 ```
 
@@ -51,7 +47,6 @@ from optimum.ara import AraQwen2_5VLConfig
 config = AraQwen2_5VLConfig.from_pretrained("./models/qwen2.5-vl/")
 ```
 
-
 ## AraQwen2_5_VLForConditionalGeneration
 
 **AraQwen2_5_VLForConditionalGeneration** extends **AraModelForVisualCausalLM** for Qwen 2.5VL models. When using Qwen VLM model for vision-language tasks, the model follows the below flow:
@@ -70,36 +65,63 @@ from optimum.ara import AraQwen2_5_VLForConditionalGeneration
 model = AraQwen2_5_VLForConditionalGeneration.from_pretrained("./models/qwen2.5-vl/")
 ```
 
+## Qwen2_5_VLProcessor
 
-## QwenVLProcessor
+The **Qwen2_5_VLProcessor** extends transformers `Qwen2_5_VLProcessor`.
 
-The **QwenVLProcessor** extends `Qwen2_5_VLProcessor`.
-
-**QwenVLProcessor** process video with `ara` constraints.
+**Qwen2_5_VLProcessor** overwrites `apply_chat_template` function to validate `fps` and `resized dimentions` against supported values.
 
 ```python
 # Processing parameters with constants
-self.fps = 2
-self.resized_height = 12 * 28
-self.resized_width = 12 * 28
-self.num_frames = 16
-self.max_duration = 26
+RESIZED_DIM = 336
+FPS = 2
 ```
 
 ### Example
 
 ```python
-from optimum.ara import QwenVLProcessor
+from optimum.ara import Qwen2_5_VLProcessor
 
 VIDEO_PATH = "path to video file"
 PROMPT = "Describe this video briefly"
 
 # Initialize the QwenVLProcessor
-processor = QwenVLProcessor()
-processed_inputs = processor(prompt=PROMPT, video_path=VIDEO_PATH)
+processor = Qwen2_5_VLProcessor.from_pretrained("Qwen/Qwen2.5-VL-3B-Instruct")
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": VIDEO_PATH,
+                "fps": 2,
+                "resized_height": 336,
+                "resized_width": 336,
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    },
+]
+
+# Preparation for inference
+text = processor.apply_chat_template(
+    messages, tokenize=False, add_generation_prompt=True
+)
+image_inputs, video_inputs, _ = process_vision_info(messages, return_video_kwargs=True)
+if image_inputs is None:
+    image_inputs = []
+if video_inputs is None:
+    video_inputs = []
+
+processed_inputs = processor(
+    text=[text],
+    videos=cast(List[Any], video_inputs if video_inputs else []),
+    padding=True,
+    return_tensors="pt",
+)
 ```
 
-We can achieve same result with `AutoProcessor` as well. 
+We can achieve same result with `AutoProcessor` as well.
 
 ```python
 from PIL import Image
@@ -147,7 +169,6 @@ model_type = "ara_qwen_image"
 ```
 
 To know more about the AraPretrainedConfig class, refer [AraPretrainedConfig](../base_classes/ara_pretrained_config.md).
-
 
 ### AraQwen2_5_ImageForConditionalGeneration
 

@@ -1,6 +1,6 @@
 # AraModelForCausalLM APIs
 
-**AraModelForCausalLM** is a base class used by model specific class to build on top of it. This class is specific for LLM models.
+**AraModelForCausalLM** is a base class that serves as the foundation for model-specific classes built on top of it. This class is specific for LLM models.
 
 **Note:** This base class is useful to add support for custom LLM model that is not already supported in optimum-ara.
 
@@ -22,12 +22,13 @@ def from_pretrained(
     *args,
     **kwargs,
 ) -> "AraModelForCausalLM":
- ``` 
+```
+
 ### Arguments:
 
 | Arguments                                                                                        | Description                                                                                                                                                                                               |
 | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pretrained_model_name_or_path `                                                                 | Path to directory containing config.json                                                                                                                                                                  |
+| `pretrained_model_name_or_path `                                                                 | Specifies the path to a directory containing config.json                                                                                                                                                  |
 | `config `                                                                                        | Optional configuration object to initialize the model object, if config is provide `pretrained_model_name_or_path ` is used only as backup to find for model.dvm file if config doesn't have correct path |
 | `args`                                                                                           | Forward addition arguments to parent class.                                                                                                                                                               |
 | `kwargs : following configs are support through kwargs`                                          |                                                                                                                                                                                                           |
@@ -39,14 +40,14 @@ def from_pretrained(
 ### Raises:
 
 - `ValueError`:
-    - Raised when the parameters combination use_cache=False, use_merged=True" is not supported. To use a merged decoder, past key values must be used.
-    - 	All of `model_id`, `file_name`, and `config` are missing.
+  - Raised when the parameters combination use_cache=False, use_merged=True" is not supported. To use a merged decoder, past key values must be used.
+  - All of `model_id`, `file_name`, and `config` are missing.
 
 - `FileNotFoundError`:
-    - Raised when none of the methods could find any DVM model file.
+  - Raised when none of the methods could find any DVM model file.
 
 - `NotImplementedError`:
-    - Currently, handling multiple .dvm files in the same folder is unsupported. So this is raised when more than one .dvm file found in the folder. 
+  - Raised when more than one .dvm file is found in the folder, as handling multiple .dvm files in the same folder are currently unsupported.
 
 ### Returns:
 
@@ -59,12 +60,11 @@ Its specially useful when config parameters need to updated from script at runti
 
 ```python
 def from_config(
-    cls, 
-    config: AraPretrainedConfig, 
+    cls,
+    config: AraPretrainedConfig,
     **kwargs
 ):
 ```
-
 
 ### Arguments:
 
@@ -117,12 +117,12 @@ def generate(  # pyrefly: ignore[bad-override]
 | `generation_config (Optional[AraGenerationConfig])` | Defines generation settings like maximum length and sampling behavior. Any matching **kwargs will override its values. If not supplied, it's loaded from generation_config.json if present, otherwise from the model's default configuration. |
 | `logits_processor (Optional[LogitsProcessorList])`  | Custom logits processors.                                                                                                                                                                                                                     |
 | `streamer (Optional[BaseStreamer])`                 | A streamer object used to handle streaming of generated tokens. Tokens are passed using `streamer.put(token_ids)`, and the streamer handles output processing.                                                                                |
-| `**kwargs`                                          | Additional parameters for generation or model-specific settings.                                                                                                                                                                              |
+| `**kwargs`                                          | Other parameters used to customize generation behavior or apply model-specific settings                                                                                                                                                       |
 
 ### Raises:
 
 - `DvApiException`:
-    - Raised when `_generate_first_token()` method fails to generate first token.
+  - Raised when `_generate_first_token()` method fails to generate first token.
 
 ### Returns:
 
@@ -131,8 +131,8 @@ Generates token IDs for the provided tensor/prompt.
 ### Example
 
 ```python
-from optimum.ara import AraModelForCausalLM, AraGenerationConfig  
-from transformers import AutoTokenizer  
+from optimum.ara import AraModelForCausalLM, AraGenerationConfig
+from transformers import AutoTokenizer
 
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},

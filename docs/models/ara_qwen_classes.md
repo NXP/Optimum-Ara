@@ -1,13 +1,11 @@
 # Ara Qwen Model Classes
 
-Purpose of these classes is to run an `ara` model on `ara` device with the ease of hugging face apis. 
+Purpose of these classes is to run an `ara` model on `ara` device with the ease of hugging face apis.
 
 We have added two LlaMA specific classes.
-- [Ara Qwen Model Classes](#ara-qwen-model-classes)
-  - [AraQwenConfig()](#araqwenconfig)
-    - [Example:](#example)
-  - [AraQwenForCausalLM()](#araqwenforcausallm)
-    - [Example:](#example-1)
+
+- [AraQwenConfig](#araqwenconfig)
+- [AraQwenForCausalLM](#araqwenforcausallm)
 
 ## AraQwenConfig()
 
@@ -31,7 +29,7 @@ config = AraQwenConfig.from_pretrained("./models/qwen2_7b/")
 
 **AraQwenForCausalLM** is a model specific class which extends `AraModelForCausalLM`
 
-Checkout `AraModelForCausalLM` class for more info, refer [AraModelForCausalLM](ara_model_for_causallm.mdx). 
+Checkout `AraModelForCausalLM` class for more info, refer [AraModelForCausalLM](../base_classes/ara_model_for_causallm.md).
 
 ### Example:
 

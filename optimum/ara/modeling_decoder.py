@@ -6,7 +6,7 @@ import os
 from copy import deepcopy
 import logging
 from pathlib import Path
-from typing import Optional, Union, Any, List, Dict, cast, Tuple, TYPE_CHECKING
+from typing import Optional, Union, Any, List, Dict, cast, Tuple, Callable
 import torch
 import numpy as np
 
@@ -30,10 +30,11 @@ from .configuration_utils import AraPretrainedConfig, AraConfig
 from .generation.configuration_utils import AraGenerationConfig, AraHostConfig
 from .generation import CustomLogitsProcessor
 from .modeling_base import AraModel
-from .generation.logits_process import LogitsDequantizer, SampleLogitsProcessor
-from .utils.constants import DEFAULT_GENERATION_CONFIG_NAME
-from .utils.file_utils import find_files_matching_pattern
-from .utils.utils import get_logits_processor, get_stopping_criteria
+from .generation.logits_process import (
+    SpeculativeDecodingLogitsProcessor,
+    SampleLogitsProcessor,
+)
+from .generation.logits_process import LogitsDequantizer
 
 
 class AraModelForCausalLM(AraModel, GenerationMixin):
@@ -125,18 +126,21 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
         eos_token_id = self.core.get_eos_token_id()
         is_speculative = self.core.is_speculative()
         is_host_specd = self.core.is_host_specd()
-        if generation_config.ara.target_prompt_post_mcp == 1:
-            # post processing on device
-            if is_speculative:
-                output_size = 4
-            else:
-                output_size = 1
-        else:
-            if is_speculative:
-                output_size = 4 * vocab_size
-            else:
-                output_size = vocab_size
 
+        multiplier = 4 if is_speculative else 1
+        if (
+            generation_config.ara.target_prompt_post_mcp == 1
+            and generation_config.ara.target_token_post_mcp == 1
+        ):
+            output_size = multiplier
+        else:
+            # Allocate buffer size to accommodate the maximum of:
+            # - specD: (1 * vocab_size + 6) for logits + draft metadata (3 token IDs + 3 probs)
+            # - Non-SpecD: (4 * vocab_size) for 4 candidate token logits
+            # The +6 ensures we create a buffer large enough for both cases
+            output_size = multiplier * vocab_size + 6
+
+        # For host-based specD models: override to use exactly 4 * vocab_size
         if is_host_specd == 1:
             output_size = 4 * vocab_size
 
@@ -293,38 +297,43 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             dv_status_code: Status code of the inference.
         """
 
-        skip_tokens = kwargs.pop("tokens_to_skip", 0)
-        if generation_config is None:
-            raise ValueError(
-                "generation_config cannot be None in _generate_first_token"
-            )
-        self.logits_processor = get_logits_processor(generation_config)
+        skp_tokns = kwargs.pop("tokens_to_skip", 0)
         if (
-            not generation_config.ara.target_prompt_pre_mcp
+            generation_config is not None
+            and not generation_config.ara.target_prompt_pre_mcp
         ):  # mcp = 0 means processing on host.
-            input_array_block = input_array.view(np.int32)
-
-            if self.embedding is None or self.embedding_scales is None:
-                raise ValueError(
-                    "Both embedding and embedding_scales are required for host post-processing"
-                )
-
-            _device = cast(
-                Optional[Union[torch.device, str, int]], self.embedding.weight.device
-            )
             input_ids_torch = torch.as_tensor(
-                input_array_block, dtype=torch.int32, device=_device
+                input_array.view(np.int32),
+                dtype=torch.int32,
+                device=str(self.embedding.weight.device)
+                if self.embedding is not None
+                else "cpu",
             )
-            output = self.embedding(input_ids_torch)
-            output_scale = self.embedding_scales(input_ids_torch)
+
+            # Flatten embeddings into byte-level (int8) array for device concatenation
+            embedding_out = (
+                self.embedding(input_ids_torch)
+                if self.embedding is not None
+                else torch.zeros(
+                    (input_ids_torch.shape[0], self.core.get_embedding_size()),
+                    device="cpu",
+                )
+            )
+            output = embedding_out.detach().cpu().numpy().flatten().view(np.int8)
+
+            # Flatten scales into byte-level (int8) array for device concatenation
+            scales_out = (
+                self.embedding_scales(input_ids_torch)
+                if self.embedding_scales is not None
+                else torch.zeros(
+                    (input_ids_torch.shape[0], self.core.get_vocab_size() // 64),
+                    device="cpu",
+                )
+            )
+            output_scales = scales_out.detach().cpu().numpy().flatten().view(np.int8)
 
             input_array = np.concatenate(
-                (
-                    input_array.view(np.int8),
-                    output.detach().flatten().numpy(),
-                    output_scale.detach().flatten().numpy(),
-                ),
-                axis=0,
+                (input_array.view(np.int8), output, output_scales), axis=0
             )
 
         status, _, _ = self.core.forward(
@@ -333,8 +342,9 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             infer_type=self.core.infer_type.DV_INFER_TYPE_LLM_PROMPT_PROCESSING,
             active_tokens=num_active_tokens,
             valid_tokens=num_valid_tokens,
-            tokens_to_skip=skip_tokens,
+            tokens_to_skip=skp_tokns,
         )
+        return status
 
     def _generate_next_token(
         self,
@@ -359,26 +369,38 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
         if generation_config is None:
             raise ValueError("generation_config cannot be None")
         if generation_config.ara.target_token_pre_mcp == 0:
-            if self.embedding is None or self.embedding_scales is None:
-                raise ValueError(
-                    "Both embedding and embedding_scales are required for host post-processing"
-                )
-            _device = cast(
-                Optional[Union[torch.device, str, int]], self.embedding.weight.device
-            )
             input_ids_torch = torch.as_tensor(
-                input_array, dtype=torch.long, device=_device
+                input_array,
+                dtype=torch.long,
+                device=str(self.embedding.weight.device)
+                if self.embedding is not None
+                else "cpu",
             )
-            # print(input_ids_torch[:10])
-            output = self.embedding(input_ids_torch)
-            output_scale = self.embedding_scales(input_ids_torch)
+
+            # Flatten embeddings into byte-level (int8) array for device concatenation
+            embedding_out = (
+                self.embedding(input_ids_torch)
+                if self.embedding is not None
+                else torch.zeros(
+                    (input_ids_torch.shape[0], self.core.get_embedding_size()),
+                    device="cpu",
+                )
+            )
+            output = embedding_out.detach().cpu().numpy().flatten().view(np.int8)
+
+            # Flatten scales into byte-level (int8) array for device concatenation
+            scales_out = (
+                self.embedding_scales(input_ids_torch)
+                if self.embedding_scales is not None
+                else torch.zeros(
+                    (input_ids_torch.shape[0], self.core.get_vocab_size() // 64),
+                    device="cpu",
+                )
+            )
+            output_scales = scales_out.detach().cpu().numpy().flatten().view(np.int8)
+
             input_array = np.concatenate(
-                (
-                    input_array,
-                    output.detach().flatten().numpy().astype(np.int8),
-                    output_scale.detach().flatten().numpy().astype(np.int8),
-                ),
-                axis=0,
+                (input_array.view(np.int8), output, output_scales), axis=0
             )
 
         status, inf_req_obj, infer_time = self.core.forward(
@@ -389,7 +411,6 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             valid_tokens=num_valid_tokens,
             tokens_to_skip=0,
         )
-
         return status, inf_req_obj, infer_time
 
     def _extract_next_tokens(
@@ -419,83 +440,63 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             np.ndarray: Next tokens as int32 (shape: [num_tokens]).
         """
         vocab_size = self.core.get_vocab_size()
-        if is_first_token:
-            # For first token, check target_prompt_post_mcp
-            if generation_config.ara.target_prompt_post_mcp == 0:
-                # Case: device returned logits
-                raw_logits = output_array[:vocab_size].copy()
-                processed_logits = self._apply_logit_processing(
-                    input_ids, raw_logits.astype(np.float32)
+        target_post_mcp = (
+            generation_config.ara.target_prompt_post_mcp
+            if is_first_token
+            else generation_config.ara.target_token_post_mcp
+        )
+
+        if target_post_mcp == 0:
+            # Case: device returned logits
+            raw_logits = output_array[:vocab_size].copy().astype(np.float32)
+
+            assert self.logits_processor is not None, (
+                "logits_processor must be initialized before extraction."
+            )
+
+            if isinstance(input_ids, np.ndarray):
+                input_ids_torch = cast(
+                    torch.LongTensor, torch.from_numpy(input_ids).long()
                 )
-                next_tokens = np.argmax(processed_logits, axis=-1, keepdims=True)
-                return next_tokens
             else:
-                # Case: device returned tokens
-                return output_array[:num_valid_tokens].copy()
+                input_ids_torch = cast(torch.LongTensor, input_ids.long())
+            if input_ids_torch.dim() == 1:
+                input_ids_torch = cast(torch.LongTensor, input_ids_torch.unsqueeze(0))
+
+            logits_torch = cast(torch.FloatTensor, torch.from_numpy(raw_logits).float())
+            if logits_torch.dim() == 1:
+                logits_torch = cast(torch.FloatTensor, logits_torch.unsqueeze(0))
+
+            processed = self.logits_processor(input_ids_torch, logits_torch)
+            return processed.detach().cpu().numpy().flatten().astype(np.int32)
         else:
-            # For next tokens, check target_token_post_mcp
-            if generation_config.ara.target_token_post_mcp == 0:
-                # Case: device returned logits
-                raw_logits = output_array[:vocab_size].copy()
-                processed_logits = self._apply_logit_processing(
-                    input_ids, raw_logits.astype(np.float32)
-                )
-                next_tokens = np.argmax(processed_logits, axis=-1, keepdims=True)
-                return next_tokens
-            else:
-                # Case: device returned tokens
-                return output_array[:num_valid_tokens].copy()
+            # Case: device returned tokens
+            return output_array[:num_valid_tokens].copy().astype(np.int32)
 
-    def _ensure_generation_operators(
-        self, generation_config: Optional[AraGenerationConfig] = None
-    ) -> None:
-        """
-        Ensure self.logits_processor and self.stopping_criteria are set up
-        according to the (possibly updated) generation configuration.
-        """
-        if generation_config is None:
-            raise ValueError("generation_config cannot be None")
-        gc = generation_config
-        # These two helpers mirror HF's design: a list of score processors and optional stopping rules.
-        self.logits_processor = get_logits_processor(gc)
-        self.stopping_criteria = get_stopping_criteria(gc)
-
-    def _apply_logit_processing(
-        self,
-        input_ids: Union[np.ndarray, torch.Tensor],
-        raw_logits: np.ndarray,
-    ) -> np.ndarray:
-        """
-        Apply the configured logits processors to raw logits (shape: [vocab_size])
-        using the provided input_ids (shape: [1, seq_len]). Returns a numpy array
-        with the same shape as raw_logits.
-
-        This centralizes 'local' logit processing so both LLMs and VLMs can use it
-        when mcp=0 (i.e., the device returns raw logits and we must process locally).
-        """
-        # If no processors are configured, return raw logits as-is.
+    def _update_draft_tokens(self, draft_info: np.ndarray):
+        """Helper to find SpeculativeDecodingLogitsProcessor and update its draft tokens."""
         if not hasattr(self, "logits_processor") or self.logits_processor is None:
-            return raw_logits
+            return
 
-        # Normalize input_ids to a torch.LongTensor of shape [1, seq_len]
-        if isinstance(input_ids, np.ndarray):
-            input_ids_torch = cast(torch.LongTensor, torch.from_numpy(input_ids).long())
-        else:
-            input_ids_torch = cast(torch.LongTensor, input_ids.long())
-        if input_ids_torch.dim() == 1:
-            input_ids_torch = cast(torch.LongTensor, input_ids_torch.unsqueeze(0))
+        try:
+            draft_ids = cast(
+                torch.LongTensor,
+                torch.from_numpy(draft_info[:3].astype(np.int32)).long(),
+            )
+            draft_probs = cast(
+                torch.FloatTensor,
+                torch.from_numpy(draft_info[3:].astype(np.float32)).float() / 1000.0,
+            )
 
-        # Normalize logits to a torch.FloatTensor of shape [1, vocab_size]
-        # (HF LogitsProcessorList expects (batch, vocab))
-        logits_torch = cast(torch.FloatTensor, torch.from_numpy(raw_logits).float())
-        if logits_torch.dim() == 1:
-            logits_torch = cast(torch.FloatTensor, logits_torch.unsqueeze(0))
-
-        # Apply the processors (e.g., repetition penalty, temperature/top-k/top-p, etc.)
-        processed = self.logits_processor(input_ids_torch, logits_torch)
-
-        # Return back to numpy 1D (vocab_size)
-        return processed.squeeze(0).detach().cpu().numpy().astype(np.int32)
+            for processor in self.logits_processor:
+                if isinstance(processor, SpeculativeDecodingLogitsProcessor):
+                    processor.update_draft(draft_ids, draft_probs)
+                    logging.debug(
+                        f"Updated draft tokens: {draft_ids.tolist()}, {draft_probs.tolist()}"
+                    )
+                    break
+        except (IndexError, ValueError) as e:
+            logging.error(f"Failed to update draft tokens: {e}")
 
     def _handle_host_specd(
         self,
@@ -659,7 +660,61 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             return GenerateDecoderOnlyOutput(sequences=generated_list)
         return generated_list
 
-    def generate(  # pyrefly: ignore[bad-override]
+    def _get_logits_processor(
+        self,
+        generation_config: "GenerationConfig",
+        input_ids_seq_length: Optional[int] = None,
+        encoder_input_ids: Optional[torch.LongTensor] = None,
+        prefix_allowed_tokens_fn: Optional[
+            Callable[[int, torch.Tensor], List[int]]
+        ] = None,
+        logits_processor: Optional[LogitsProcessorList] = None,
+        device: Optional[str] = None,
+        model_kwargs: Optional[Dict[str, Any]] = None,
+        negative_prompt_ids: Optional[torch.Tensor] = None,
+        negative_prompt_attention_mask: Optional[torch.Tensor] = None,
+    ) -> LogitsProcessorList:
+        """
+        Overloaded method to retrieve logits processors, injecting custom processors
+        (LogitsDequantizer at the start, and Speculative/Sample processors at the end).
+        """
+        # Call super to get the standard transformers processors
+        kwargs: Dict[str, Any] = dict(
+            generation_config=generation_config,
+            input_ids_seq_length=input_ids_seq_length,
+            prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
+            logits_processor=logits_processor,
+            device=device,
+            model_kwargs=model_kwargs,
+            negative_prompt_ids=negative_prompt_ids,
+            negative_prompt_attention_mask=negative_prompt_attention_mask,
+        )
+        if encoder_input_ids is not None:
+            kwargs["encoder_input_ids"] = encoder_input_ids
+        processors = super()._get_logits_processor(**kwargs)
+
+        # 1. Add LogitsDequantizer as the *first* processor if post processing on host.
+        # 2. Add ARA-specific processors if mcp == 0
+        if isinstance(generation_config, AraGenerationConfig) and (
+            not generation_config.ara.target_token_post_mcp
+            or not generation_config.ara.target_prompt_post_mcp
+        ):
+            processors.insert(0, LogitsDequantizer())
+            is_speculative = self.core.is_speculative()
+            if is_speculative:
+                pad_token_id = self.core.get_pad_token_id()
+                processors.append(
+                    SpeculativeDecodingLogitsProcessor(
+                        pad_token_id=pad_token_id, do_sample=generation_config.do_sample
+                    )
+                )
+            processors.append(
+                SampleLogitsProcessor(do_sample=generation_config.do_sample)
+            )
+
+        return processors
+
+    def generate(
         self,
         inputs: Optional[torch.Tensor] = None,
         generation_config: Optional[
@@ -674,7 +729,7 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
         negative_prompt_ids: Optional[torch.Tensor] = None,
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
         use_model_defaults: Optional[bool] = None,
-        custom_generate: Optional[str] = None,
+        custom_generate: Optional[Union[str, Callable]] = None,
         **kwargs,
     ) -> Union[GenerateDecoderOnlyOutput, torch.LongTensor, Any]:
         """
@@ -723,6 +778,11 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             logging.error("input is empty")
             return torch.LongTensor([[]])
 
+        if streamer:
+            # put input token ids, as expected from HF
+            # if skip prompt is true, first put will be ignored.
+            streamer.put(numpy_inputs)
+
         # updates generation variables according to the generation config sent or kwargs
         generation_config, _ = self._prepare_generation_config(
             generation_config, **kwargs
@@ -731,7 +791,7 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
         self.logits_processor = (
             logits_processor
             if logits_processor is not None
-            else get_logits_processor(generation_config)
+            else self._get_logits_processor(cast(GenerationConfig, generation_config))
         )
 
         self.core.update_llm_params(generation_config)
@@ -751,6 +811,25 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
         num_max_tokens = self.core.get_max_num_tokens()
         vocab_size = self.core.get_vocab_size()
 
+        # vocab_size= self.model._model.llm_params.contents.vocab_size
+
+        # Prepare arguments for _get_logits_processor
+        # We use strict arguments to ensure compatibility with transformers signature
+        input_ids_seq_length = numpy_inputs.size if numpy_inputs is not None else 0
+
+        # Retrieve the device correctly
+        device = None
+        if hasattr(self, "embedding") and hasattr(self.embedding, "weight"):
+            device = str(self.embedding.weight.device)
+
+        # BREIF: Up to the user to maintian the correct order of processors.
+        self.logits_processor = self._get_logits_processor(
+            generation_config=generation_config,
+            input_ids_seq_length=input_ids_seq_length,
+            logits_processor=logits_processor,
+            device=device,
+            model_kwargs=kwargs,
+        )
         # Backward Compatible with releases before r1.3.1
         is_host_specd = self.core.is_host_specd()
         # if hasattr(self.core.dv_internal.model._model.llm_params.contents, 'is_host_specd'):
@@ -816,27 +895,31 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
         if generation_config.ara.target_prompt_post_mcp:
             valid_tokens = output_array[:1].copy().astype("int32")
         else:
-            if custom_logits_processor:
-                valid_tokens = custom_logits_processor(input_ids=[], scores=output_array, new_prompt=True)
-            elif generation_config.do_sample:
-                # Apply MCP on the output logits
-                logits_torch = (
-                    torch.from_numpy(output_array[:vocab_size]).float().unsqueeze(0)
+            # Apply MCP on the output logits
+            logits_torch = (
+                torch.from_numpy(output_array[:vocab_size]).float().unsqueeze(0)
+            )
+            input_ids_torch = (
+                cast(torch.Tensor, self._num_input_tokens).clone().detach().long()
+            )
+            if input_ids_torch.shape[0] != logits_torch.shape[0]:
+                input_ids_torch = input_ids_torch.unsqueeze(0)
+            # Apply processors
+            processed_logits = self.logits_processor(
+                cast(torch.LongTensor, input_ids_torch),
+                cast(torch.FloatTensor, logits_torch),
+            )
+            if generation_config.do_sample:
+                valid_tokens = (
+                    processed_logits.detach().cpu().numpy().flatten().astype("int32")
                 )
-                input_ids_torch = torch.tensor(self._num_input_tokens).long()
-                if input_ids_torch.shape[0] != logits_torch.shape[0]:
-                    input_ids_torch = input_ids_torch.unsqueeze(0)
-                # Apply processors
-                self.logits_processor.insert(0, LogitsDequantizer())
-                self.logits_processor.append(SampleLogitsProcessor())
-                processed_logits = self.logits_processor(
-                    cast(torch.LongTensor, input_ids_torch),
-                    cast(torch.FloatTensor, logits_torch),
-                )
-                valid_tokens = processed_logits.detach().cpu().numpy().flatten()
             else:
-                valid_tokens = np.argmax(output_array, axis=-1, keepdims=True).astype(
-                    "int32"
+                valid_tokens = (
+                    np.argmax(
+                        processed_logits.detach().cpu().numpy(), axis=-1, keepdims=True
+                    )
+                    .flatten()
+                    .astype("int32")
                 )
         generated_list += valid_tokens[:1].flatten().tolist()
 
@@ -889,37 +972,57 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
 
             # assert inf_req is not None
 
+            # Get the number of valid tokens reported by the device
             num_valid_tokens = (
                 inf_req.contents.llm_infer_info.contents.llm_infer_resp_num_valid_tokens
             )
 
-            # Check if we got any valid tokens
-            if num_valid_tokens == 0:
-                # No more tokens generated, break the loop
-                logging.error("No more valid token generated!")
-                break
-
             if generation_config.ara.target_token_post_mcp:
+                if not num_valid_tokens:
+                    logging.error("No more valid token generated!")
+                    break
                 valid_tokens = output_array[:num_valid_tokens]
             else:
-                if custom_logits_processor:
-                    valid_tokens = custom_logits_processor(input_ids=[], scores=output_array)
-                elif generation_config.do_sample:
-                    # Apply MCP on the output logits
+                if is_speculative:
+                    draft_info = output_array[-6:]
+                    self._update_draft_tokens(draft_info)
+                    logits_buf = output_array[:-6]
+                    logits_torch = torch.from_numpy(logits_buf).float().reshape(4, -1)
+                else:
                     logits_torch = (
                         torch.from_numpy(output_array[:vocab_size]).float().unsqueeze(0)
                     )
-                    input_ids_torch = torch.tensor(self._num_input_tokens).long()
-                    if input_ids_torch.shape[0] != logits_torch.shape[0]:
-                        input_ids_torch = input_ids_torch.unsqueeze(0)
-                    # Apply processors
-                    processed_logits = self.logits_processor(
-                        cast(torch.LongTensor, input_ids_torch),
-                        cast(torch.FloatTensor, logits_torch),
+
+                # Always update context with generated tokens
+                input_ids_torch = (
+                    cast(torch.Tensor, self._num_input_tokens).clone().detach().long()
+                )
+                if input_ids_torch.dim() == 1:
+                    input_ids_torch = input_ids_torch.unsqueeze(0)
+
+                if len(generated_list) > 0:
+                    gen_t = (
+                        torch.LongTensor(generated_list)
+                        .unsqueeze(0)
+                        .to(input_ids_torch.device)
                     )
-                    valid_tokens = processed_logits.detach().cpu().numpy().flatten()
-                else:
-                    valid_tokens = np.argmax(output_array, axis=-1, keepdims=True)
+                    input_ids_torch = torch.cat([input_ids_torch, gen_t], dim=1)
+
+                if input_ids_torch.shape[0] != logits_torch.shape[0]:
+                    input_ids_torch = input_ids_torch.expand(logits_torch.shape[0], -1)
+                # Apply processors
+                processed_logits = self.logits_processor(
+                    cast(torch.LongTensor, input_ids_torch),
+                    cast(torch.FloatTensor, logits_torch),
+                )
+
+                valid_tokens = (
+                    processed_logits.detach().cpu().numpy().flatten().astype("int32")
+                )
+
+                if is_speculative:
+                    num_valid_tokens = len(valid_tokens)
+
             next_token_index += len(valid_tokens)
 
             if streamer is not None:
@@ -985,6 +1088,11 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
             *args: forwarded to parent class.
             **kwargs: Additional arguments (e.g., use_cache, file_name).
 
+            revision (`str`, *optional*, defaults to `"main"`):
+                The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                identifier allowed by git.
+
         Returns:
             AraModelForCausalLM: Loaded model instance.
         """
@@ -1002,11 +1110,10 @@ class AraModelForCausalLM(AraModel, GenerationMixin):
 
         file_name = kwargs.pop("file_name", None)
         use_cache = kwargs.pop("use_cache", True)
+        revision = kwargs.pop("revision", "main")
         # Get LLM DVM path using parent class method
         llm_path = cls._get_llm_dvm_path(
-            pretrained_model_name_or_path,
-            config,
-            file_name,
+            pretrained_model_name_or_path, config, file_name, revision
         )
 
         # Create LLM instance

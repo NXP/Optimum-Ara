@@ -2,21 +2,102 @@
 # Copyright 2025-2026 NXP
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-QwenVLProcessor for Demo Integration
-A copy of the unified processor designed to work with the existing demo structure
-"""
+#!/usr/bin/env python3
+import logging
+import typing
+from typing import Any, Optional, Union
 
-from typing import Dict, List, Optional, Any, cast
+import typing_extensions
+from transformers import Qwen2_5_VLProcessor as _Qwen2_5_VLProcessor
+from transformers.processing_utils import AllKwargsForChatTemplate
 
-import torch
-import PIL.Image
-import torchvision.io as io
-from qwen_vl_utils import process_vision_info
-from transformers import BatchFeature, Qwen2_5_VLProcessor
+try:
+    from typing import Unpack
+except ImportError:
+    from typing_extensions import Unpack
+
+
+class ExtendedChatTemplateKwargs(AllKwargsForChatTemplate, total=False):
+    add_generation_prompt: Optional[bool]
+    tokenize: Optional[bool]
+
+
+class Qwen2_5_VLProcessor(_Qwen2_5_VLProcessor):
+    """A thin subclass of the Transformers Qwen2_5_VLProcessor that enforces
+    fixed image dimensions (336x336) and video FPS (2) via apply_chat_template.
+    """
+
+    def apply_chat_template(  # type: ignore[override]
+        self,
+        conversation: Union[list[dict[str, Any]], list[list[dict[str, Any]]]],
+        chat_template: Optional[str] = None,
+        **kwargs: Unpack[ExtendedChatTemplateKwargs],
+    ) -> str:
+        RESIZED_DIM = 336
+        FPS = 2
+
+        for msg in conversation:
+            if not isinstance(msg, dict):
+                continue
+
+            if msg["role"] == "user":
+                for content in msg["content"]:
+                    # hardcoding resized heights/widths
+                    if (
+                        isinstance(content, dict)
+                        and content["type"] == "image"
+                        and content.get("resized_height", RESIZED_DIM) != RESIZED_DIM
+                    ):
+                        logging.info(
+                            f"Resetting image height to {RESIZED_DIM}px. "
+                            f"Got {content['resized_height']}"
+                        )
+                        content["resized_height"] = RESIZED_DIM
+
+                    if (
+                        isinstance(content, dict)
+                        and content["type"] == "image"
+                        and content.get("resized_width", RESIZED_DIM) != RESIZED_DIM
+                    ):
+                        logging.info(
+                            f"Resetting image width to {RESIZED_DIM}px. "
+                            f"Got {content['resized_width']}"
+                        )
+                        content["resized_width"] = RESIZED_DIM
+
+                    # hardcoding fps
+                    if (
+                        isinstance(content, dict)
+                        and content["type"] == "video"
+                        and content.get("fps", FPS) != FPS
+                    ):
+                        logging.info(f"Resetting FPS to {FPS}px. Got {content['fps']}")
+                        content["resized_width"] = FPS
+
+        return super().apply_chat_template(conversation, chat_template, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Legacy processor — kept for backwards compatibility
+# ---------------------------------------------------------------------------
+
+from typing import Dict, List, cast  # noqa: E402
+
+import torch  # noqa: E402
+import PIL.Image  # noqa: E402
+import torchvision.io as io  # noqa: E402
+from qwen_vl_utils import process_vision_info  # noqa: E402
+from transformers import BatchFeature  # noqa: E402
 
 
 class QwenVLProcessor:
+    """Stateful video/image processor wrapping Qwen2_5_VLProcessor.
+
+    .. deprecated::
+        Use :class:`Qwen2_5_VLProcessor` instead.
+        ``QwenVLProcessor`` will be removed in a future release.
+    """
+
     def __init__(self, model_id: str = "Qwen/Qwen2.5-VL-7B-Instruct"):
         """
         Initialize the QwenVLProcessor.
@@ -24,8 +105,12 @@ class QwenVLProcessor:
         Args:
             model_id: HuggingFace model ID for the processor
         """
+        logging.warning(
+            "QwenVLProcessor is deprecated and will be removed in a future release. "
+            "Please use Qwen2_5_VLProcessor instead."
+        )
         self.model_id = model_id
-        self.processor = Qwen2_5_VLProcessor.from_pretrained(model_id)
+        self.processor = _Qwen2_5_VLProcessor.from_pretrained(model_id)
         self.processed_inputs: Optional[BatchFeature] = None
         self.video_path: Optional[str] = None
         self.conversation: Optional[List[Dict[str, Any]]] = None
@@ -194,12 +279,15 @@ class QwenVLProcessor:
             raise ValueError("conversation cannot be None")
 
         text = self.processor.apply_chat_template(
-            self.conversation, tokenize=False, add_generation_prompt=True
+            self.conversation,
+            tokenize=False,
+            add_generation_prompt=True,
         )
 
         if not self.text_only:
             image_inputs, video_inputs, video_kwargs = process_vision_info(
-                self.conversation, return_video_kwargs=True
+                self.conversation,
+                return_video_kwargs=True,
             )
             if video_kwargs is None:
                 video_kwargs = {}
@@ -208,15 +296,15 @@ class QwenVLProcessor:
                 text=[text],
                 images=cast(List[Any], image_inputs),
                 videos=cast(List[Any], video_inputs),
-                padding=True,
-                return_tensors="pt",
+                padding=True,  # pyrefly: ignore [unexpected-keyword]
+                return_tensors="pt",  # pyrefly: ignore [unexpected-keyword]
                 **video_kwargs,
             )
         else:
             inputs = self.processor(
                 text=[text],
-                padding=True,
-                return_tensors="pt",
+                padding=True,  # pyrefly: ignore [unexpected-keyword]
+                return_tensors="pt",  # pyrefly: ignore [unexpected-keyword]
             )
 
         return inputs

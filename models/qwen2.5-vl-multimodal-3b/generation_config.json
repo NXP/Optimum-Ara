@@ -14,5 +14,6 @@
   ],
   "repetition_penalty": 1.05,
   "temperature": 0.000001,
+  "max_length": 512,
   "transformers_version": "4.49.0"
 }

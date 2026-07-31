@@ -1,0 +1,17 @@
+{
+  "ara": {
+    "target_prompt_post_mcp": 1,
+    "target_prompt_pre_mcp": 0,
+    "target_token_post_mcp": 1,
+    "target_token_pre_mcp": 1
+  },
+  "do_sample": false,
+  "max_length": 512,
+  "pad_token_id": 50256,
+  "bos_token_id": 50256,
+  "eos_token_id": 50257,
+  "decoder_start_token_id": 50258,
+  "return_timestamps": true,
+  "task": "transcribe",
+  "language": "english"
+}

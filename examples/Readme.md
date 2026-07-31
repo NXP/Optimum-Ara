@@ -3,6 +3,7 @@
 Before running examples, follow setup steps here [readme](../README.md)
 
 ## HuggingFace Hub Setup
+
 ```bash
 # this provides huggingface-cli or huggingface-hub commands.
 pip install -U huggingface_hub
@@ -13,10 +14,11 @@ huggingface-cli login
 huggingface-cli whoami 
 ```
 
->Note: llama tokenizer require agreeing to license on huggingface hub.
-https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
+> Note: llama tokenizer require agreeing to license on huggingface hub.
+> https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
 
 After this you will be able to use following in example script:
+
 ```python
 TOKENIZER_PATH = "meta-llama/Llama-2-7b-chat-hf"
 tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
@@ -41,7 +43,6 @@ optimum-ara
 # you can use sym link of model.dvm here instead of copying model.dvm here or you can change the 'dvm_path' in config.json file.
 ```
 
-
 ```bash
 # Steps to run Examples
 
@@ -55,6 +56,7 @@ python examples/casualLM.py
 ```
 
 ### examples/qwen_vl.py
+
 This example runs Qwen2.5 Video model.
 
 ```bash
@@ -67,9 +69,23 @@ python examples/qwen_vl.py
 
 ```
 
+### examples/llava_demo.py
+
+This example runs LLAVA Image model.
+
+```bash
+# Steps to run Examples
+
+# 1. Update 'dvm_path' path in models/llava/config.json to point to model.dvm
+# 2. Run from optimum-ara (top folder)
+
+python examples/llava_demo.py
+
+```
+
 ### examples/prompt_lookup.py
 
-This example shows how to use custom_logits_processor with prompt_loopkup decoding.
+This example shows how to use custom_logits_procrssor with prompt_loopkup decoding.
 
 ```bash
 # Steps to run Examples

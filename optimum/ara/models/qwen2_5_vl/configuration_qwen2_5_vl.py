@@ -2,9 +2,9 @@
 # Copyright 2025-2026 NXP
 # SPDX-License-Identifier: Apache-2.0
 
+
 from typing import ClassVar, Optional
 from ...configuration_utils import AraConfig, AraPretrainedConfig
-
 # We only support Qwen2_5_VL models in following modalities
 # Each dvm is tied to a specific modality due to its inherent
 # rope table.

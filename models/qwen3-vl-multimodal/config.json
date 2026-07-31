@@ -1,0 +1,22 @@
+{
+  "ara": {
+    "dvm_path": "/users/jayant/karan_llm.dvm",
+    "interface_ip_address": "127.0.0.1",
+    "interface_named_pipe": "//./pipe/proxy_pipe",
+    "interface_port": 5000,
+    "interface_socket_file": "/var/run/proxy.sock",
+    "interface_type": "SOCKET",
+    "vision_model_path": "/users/jayant/karan_vision.dvm",
+    "rope_table_path": "/users/jayant/llm_app_qwen3_vl/llm_app/qwen3_vl_vision_constant_inputs/rope_qwen3vl_8bit.bin",
+    "vision_pos_table_path": "/users/jayant/llm_app_qwen3_vl/llm_app/qwen3_vl_vision_constant_inputs/pos_embed_qwen3vl_8bit.bin",
+    "vision_pos_table_scale_path": "/users/jayant/llm_app_qwen3_vl/llm_app/qwen3_vl_vision_constant_inputs/pos_embed_qwen3vl_scale_8bit.bin"
+  },
+  "architectures": [
+    "Qwen3_VLForConditionalGeneration"
+  ],
+  "vision_token_id": 151654,
+  "image_token_id": 151655,
+  "video_token_id": 151656,
+  "max_position_embeddings": 128000,
+  "model_type": "ara_qwen3_multimodal"
+}

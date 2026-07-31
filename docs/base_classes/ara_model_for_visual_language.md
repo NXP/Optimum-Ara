@@ -22,7 +22,8 @@ Establishes a connection with the Ara device and loads the model on it.
         *args,
         **kwargs,
     ) -> "AraModelForVisualCausalLM":
- ``` 
+```
+
 ### Arguments:
 
 | Arguments                                                                                        | Description                                                                                                                                                |
@@ -35,18 +36,17 @@ Establishes a connection with the Ara device and loads the model on it.
 | `file_name (Optional[str])`                                                                      | Specific model file name.                                                                                                                                  |
 | `use_cache (Optional[bool])` **(unsupported for now)**                                           | Indicates whether the model should use previously computed key/value attention states to accelerate decoding, if supported.                                |
 
-
 ### Raises:
 
 - `ValueError`:
-    - Raised when the parameters combination use_cache=False, use_merged=True" is not supported. To use a merged decoder, past key values must be used.
-    - 	All of `model_id`, `file_name`, and `config` are missing.
+  - Raised when the parameters combination use_cache=False, use_merged=True" is not supported. To use a merged decoder, past key values must be used.
+  - All of `model_id`, `file_name`, and `config` are missing.
 
 - `FileNotFoundError`:
-    - Raised when none of the methods could find any DVM model file.
+  - Raised when none of the methods could find any DVM model file.
 
 - `NotImplementedError`:
-    - Currently, handling multiple .dvm files in the same folder is unsupported. So this is raised when more than one .dvm file found in the folder. 
+  - Raised when more than one .dvm file is found in the folder, as handling multiple .dvm files in the same folder are currently unsupported.
 
 ### Returns:
 
@@ -72,8 +72,8 @@ Its specially useful when config parameters need to updated from script at runti
 
 ```python
 def from_config(
-    cls, 
-    config: AraPretrainedConfig, 
+    cls,
+    config: AraPretrainedConfig,
     **kwargs
 ):
 ```
@@ -88,7 +88,6 @@ def from_config(
 ### Returns:
 
 Returns **AraModelForVisualCausalLM** class object.
-
 
 ### Example:
 
@@ -126,7 +125,7 @@ def generate(
 | `generation_config (Optional[AraGenerationConfig])` | Defines generation settings like maximum length and sampling behavior. Any matching **kwargs will override its values. If not supplied, it's loaded from generation_config.json if present, otherwise from the model's default configuration. |
 | `logits_processor (Optional[LogitsProcessorList])`  | TCustom logits processors.                                                                                                                                                                                                                    |
 | `streamer (Optional[BaseStreamer])`                 | A streamer object used to handle streaming of generated tokens. Tokens are passed using `streamer.put(token_ids)`, and the streamer handles output processing.                                                                                |
-| `**kwargs`                                          | Additional parameters for generation or model-specific settings.                                                                                                                                                                              |
+| `**kwargs`                                          | Other parameters used to customize generation behavior or apply model-specific settings                                                                                                                                                       |
 | `input_ids (Optional[torch.LongTensor])`            | tokenized prompt input                                                                                                                                                                                                                        |
 | `pixel_values (Optional[torch.Tensor])`             | list of token ids used to control model behaviour.                                                                                                                                                                                            |
 | `pixel_values_videos (Optional[torch.Tensor])`      | list of token ids used to control model behaviour.                                                                                                                                                                                            |
@@ -138,7 +137,11 @@ Generates token IDs for the provided tensor/prompt.
 ### Example
 
 ```python
-from optimum.ara import AraQwen2_5_VLForConditionalGeneration, QwenVLProcessor, AraGenerationConfig
+from optimum.ara import (
+    AraQwen2_5_VLForConditionalGeneration,
+    QwenVLProcessor,
+    AraGenerationConfig,
+)
 from transformers import TextStreamer
 
 # Configuration
@@ -148,7 +151,9 @@ MODEL_PATH = "./models/qwen2.5-vl-3B_variable_length"
 
 # Initialize components
 model = AraQwen2_5_VLForConditionalGeneration.from_pretrained(MODEL_PATH)
-generation_config = AraGenerationConfig.from_pretrained( MODEL_PATH + "/generation_config.json")
+generation_config = AraGenerationConfig.from_pretrained(
+    MODEL_PATH + "/generation_config.json"
+)
 streamer = TextStreamer(processor.processor.tokenizer, stream=sys.stdout)
 processor = QwenVLProcessor()
 processed_inputs = processor(prompt=PROMPT, video_path=VIDEO_PATH)
@@ -160,7 +165,7 @@ result = model.generate(
     temperature=1.0,
     do_sample=False,
     stream=False,
-    streamer=streamer
+    streamer=streamer,
 )
 
 generated_text = processor.processor.decode(result.flatten(), skip_special_tokens=True)

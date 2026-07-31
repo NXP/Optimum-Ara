@@ -3,17 +3,16 @@
 To use **AraPretrainedConfig** class, we import it from `optimum.ara` in the below mentioned way.
 
 ```python
-
 from optimum.ara import AraPretrainedConfig
-
 ```
+
 **AraPretrainedConfig** extends `PretrainedConfig` class with `ara` specific config parameters.
 
-Model Specific config classes can extent **AraPretrainedConfig**  class to add more model specific config parameters.
+Model Specific config classes can extent **AraPretrainedConfig** class to add more model specific config parameters.
 
-Following is ara specific config params which are required for `optimum.ara` and present in  **AraPretrainedConfig**.
+Following is ara specific config params which are required for `optimum.ara` and present in **AraPretrainedConfig**.
 
-We have choosen an approch which keeps `ara` specifc config seprate from transformer config pramas for clarity.
+We have choosen an approch which keeps `ara` specifc config seprate from transformer config params for clarity.
 
 ```json
 {
@@ -27,7 +26,6 @@ We have choosen an approch which keeps `ara` specifc config seprate from transfo
   },
   "model_type": "ara_llama"
 }
-
 ```
 
 ### Config Parameters:
@@ -41,7 +39,6 @@ We have choosen an approch which keeps `ara` specifc config seprate from transfo
 | `interface_named_pipe (unsupport for now)` | (Only Windows) named_pipe set in proxy_config.yaml, Its used only if `interface_type` is set to `NAMED_PIPE`              |
 | `interface_type`                           | interface_type set in proxy_config.yaml (interface on which proxy is running), options `IPV4`, `SOCKET`, `NAMED_PIPE`     |
 
-
 Below is the list of APIs
 
 - [`from_pretrained()`](#from_pretrained)
@@ -49,7 +46,7 @@ Below is the list of APIs
 
 ## from_pretrained()
 
-Provides the directory containing `config.json` and optionally config parameters and returns an instance of **AraPretrainedConfig**.
+Loads a configuration from a directory containing a config.json file, with optional configuration parameters, and returns an instance of the **AraPretrainedConfig** class.
 
 ```python
  def from_pretrained(
@@ -58,7 +55,7 @@ Provides the directory containing `config.json` and optionally config parameters
         **kwargs,
     ) -> "AraPretrainedConfig":
 ```
-  
+
 ### Arguments:
 
 | Arguments                                                | Description                                                                                                  |
@@ -79,13 +76,12 @@ AraPretrainedConfig.from_pretrained(). Assumes model is compiled into dvm format
 import os
 from optimum.ara import AraPretrainedConfig
 
-# Path to directory containing config.json
+# Specifies the path to a directory containing config.json
 config = AraPretrainedConfig.from_pretrained("models/llama2-7b")
 # Complete Path to config.json file
 config = AraPretrainedConfig.from_json_file("models/llama2-7b/config.json")
 # Hugging Face Hub model id, config.json will be downloaded from huggingface hub
 config = AraPretrainedConfig.from_pretrained("nxp/Qwen2.5-Coder-1.5B-Ara240")
-
 ```
 
 ## from_dict()
@@ -94,11 +90,12 @@ Loads **AraPretrainedConfig** directly from the dictionary passed in the functio
 
 ```python
 def from_dict(
-    cls, 
-    config_dict, 
+    cls,
+    config_dict,
     **unused_kwargs
     )
 ```
+
 ### Arguments:
 
 | Arguments                                   | Description                                                                                                                                                         |
@@ -113,16 +110,15 @@ This returns an instance of **AraPretrainedConfig**.
 ### Example:
 
 ```python
-
 from optimum.ara import AraPretrainedConfig
 
 config_dict = {
-  "ara": {
-    "dvm_path": "models/llama2-7b/assets/model.dvm",
-    "interface_socket_file": "/var/run/proxy.sock",
-    "interface_type": "SOCKET"
-  },
-  "model_type": "ara_llama"
+    "ara": {
+        "dvm_path": "models/llama2-7b/assets/model.dvm",
+        "interface_socket_file": "/var/run/proxy.sock",
+        "interface_type": "SOCKET",
+    },
+    "model_type": "ara_llama",
 }
 
 config = AraPretrainedConfig.from_dict(config_dict)

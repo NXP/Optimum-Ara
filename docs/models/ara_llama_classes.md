@@ -1,13 +1,11 @@
 # Ara Llama Model Classes
 
-Purpose of these classes is to run an `ara` model on `ara` device with the ease of hugging face apis. 
+Purpose of these classes is to run an `ara` model on `ara` device with the ease of hugging face apis.
 
 We have added two LlaMA specific classes.
-- [Ara Llama Model Classes](#ara-llama-model-classes)
-  - [AraLlamaConfig()](#arallamaconfig)
-    - [Example:](#example)
-  - [AraLlamaForCausalLM()](#arallamaforcausallm)
-    - [Example:](#example-1)
+
+- [AraLlamaConfig](#arallamaconfig)
+- [AraLlamaForCausalLM](#arallamaforcausallm)
 
 ## AraLlamaConfig()
 
@@ -31,7 +29,7 @@ config = AraLlamaConfig.from_pretrained("./models/llama2-7b/")
 
 **AraLlamaForCausalLM** is a model specific class which extends `AraModelForCausalLM`
 
-Checkout `AraModelForCausalLM` class for more info, refer [AraModelForCausalLM](ara_model_for_causallm.mdx). 
+Checkout `AraModelForCausalLM` class for more info, refer [AraModelForCausalLM](../base_classes/ara_model_for_causallm.md#aramodelforcausallm-apis).
 
 ### Example:
 

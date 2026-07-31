@@ -13,12 +13,14 @@ from optimum import ara
 from optimum.ara import AraGenerationConfig, AraModelForCausalLM
 import numpy as np
 
-config = AutoConfig.from_pretrained("KinaraInc/llama2-7b")
-config.ara.dvm_path = "./models/llama2-7b/assets/model.dvm"
-config.ara.interface_type = "SOCKET"
+# config = AutoConfig.from_pretrained("nxp/Qwen2.5-Coder-1.5B-Ara240")
+# config.ara.dvm_path = './models/llama2-7b/assets/model.dvm'
+# config.ara.interface_type = 'SOCKET'
 
-model = AutoModelForCausalLM.from_config(config)
-tokenizer = AutoTokenizer.from_pretrained("./models/llama2-7b/assets/llama2_tokenizer/")
+model = AutoModelForCausalLM.from_pretrained(
+    "nxp/Qwen2.5-Coder-1.5B-Ara240", revision="r2.0.4"
+)
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-1.5B")
 streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 
 messages = [

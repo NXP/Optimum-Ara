@@ -7,6 +7,7 @@ import sys
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import optimum.ara
+from optimum.ara import AraGenerationConfig
 from transformers import TextStreamer
 
 MODEL_PATH = os.path.realpath("models/llama2-7b")
@@ -19,24 +20,30 @@ INPUT_PROMPT = "Hello, how are you?"
 
 model = AutoModelForCausalLM.from_pretrained(MODEL_PATH)
 tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
-
-messages = [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": INPUT_PROMPT},
-]
-
-inputs = tokenizer.apply_chat_template(
-    conversation=messages, tokenize=False, add_generation_prompt=True
-)
-inputs = tokenizer(inputs)
 streamer = TextStreamer(tokenizer, stream=sys.stdout)
-output = model.generate(**inputs, streamer=streamer)
-generated_text = tokenizer.decode(output[0])
 
-print("\n" + "=" * 50)
-print("GENERATED TEXT:")
-print("=" * 50)
-print(generated_text)
-print("=" * 50)
+while True:
+    INPUT_PROMPT = input("prompt : ")
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": INPUT_PROMPT},
+    ]
+
+    inputs = tokenizer.apply_chat_template(
+        conversation=messages, tokenize=False, add_generation_prompt=True
+    )
+    inputs = tokenizer(inputs)
+
+    generation_config = AraGenerationConfig.from_pretrained(MODEL_PATH)
+    output = model.generate(
+        **inputs, streamer=streamer, generation_config=generation_config
+    )
+    generated_text = tokenizer.decode(output[0])
+
+    print("\n" + "=" * 50)
+    print("GENERATED TEXT:")
+    print("=" * 50)
+    print(generated_text)
+    print("=" * 50)
 
 del model

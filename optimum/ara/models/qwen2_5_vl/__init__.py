@@ -14,7 +14,7 @@ from .modeling_qwen2_5_vl import (
     AraQwen2_5_VLForConditionalGeneration,
     AraQwen2_5_MultiModalForConditionalGeneration,
 )
-from .processing_qwen2_5_vl import QwenVLProcessor
+from .processing_qwen2_5_vl import Qwen2_5_VLProcessor, QwenVLProcessor
 
 # Register with transformers library for seamless HF integration
 AutoConfig.register("ara_qwen_vl", AraQwen2_5VLConfig)
@@ -45,5 +45,6 @@ __all__ = [
     "AraQwen2_5_VLForConditionalGeneration",
     "AraQwen2_5_MultiModalForConditionalGeneration",
     "AraQwen2_5MultiModalConfig",
+    "Qwen2_5_VLProcessor",
     "QwenVLProcessor",
 ]

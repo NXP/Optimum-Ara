@@ -190,3 +190,5 @@ processor = AutoProcessor.from_pretrained(PROCESSOR_ID)
 video_inference(VIDEO_PATH, processor)
 image_inference(IMAGE_PATH, processor)
 text_inference("Who are you?", processor, sys_prompt="You are Chat Assistant by NXP")
+
+del model

@@ -2,10 +2,12 @@
 # Copyright 2025-2026 NXP
 # SPDX-License-Identifier: Apache-2.0
 
+from torch.cuda import temperature
 import json
 import os
-from typing import Optional, Union
+import logging
 
+from typing import Optional, Union
 from pydantic import BaseModel, Field, model_validator
 from transformers import GenerationConfig
 
@@ -55,6 +57,40 @@ class AraGenerationConfig(GenerationConfig):
         self.temperature = kwargs.pop("temperature", 0.0)
         self.repetition_penalty = kwargs.pop("repetition_penalty", 1.0)
         self.ara = ara_cfg
+
+        if type(self.temperature) is not float:
+            self.temperature = float(self.temperature)
+
+        if type(self.top_p) is not float:
+            self.top_p = float(self.top_p)
+
+        if self.do_sample == False:
+            logging.warning(
+                f"do_sample is False, setting top_k=1, top_p=0.0 and temperature=0.0"
+            )
+            self.top_k = 1
+            self.top_p = 0.0
+            self.temperature = 0.0
+        else:
+            if self.top_k <= 0:
+                logging.warning(f"top_k should between [1, vocab_size]")
+                logging.warning(f"Updating top_k to 1.")
+                self.top_k = 1
+
+            if self.top_p < 0.0 or self.top_p > 1.0:
+                logging.warning(
+                    "top_p out of range, supported range [0.0, 1.0]. 0.0 means disabled!"
+                )
+                logging.warning(f"Updating top_p to 0.0.")
+                self.top_p = 0.0
+
+            if self.temperature <= 0.0:
+                logging.warning("temperature should be > 0.0")
+                logging.warning(f"Updating temperature to 1.")
+                self.temperature = 1
+
+            if self.temperature > 1.2:
+                logging.warning("temperature recommended to be between 0.0 and 1.2")
 
     @classmethod
     def make_ara_config(

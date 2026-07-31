@@ -6,7 +6,7 @@ import os
 from copy import deepcopy
 import logging
 from pathlib import Path
-from typing import Optional, Union, cast, List, Dict, Any, Tuple
+from typing import Optional, Union, cast, List, Dict, Any, Tuple, Callable
 import torch
 import numpy as np
 
@@ -363,7 +363,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         ara_cfg = generation_config.ara
         if (
             ara_cfg.target_prompt_post_mcp != mcp_dict["target_prompt_post_mcp"]
-            or ara_cfg.target_prompt_pre_mcp != mcp_dict["target_token_pre_mcp"]
+            or ara_cfg.target_prompt_pre_mcp != mcp_dict["target_prompt_pre_mcp"]
             or ara_cfg.target_token_post_mcp != mcp_dict["target_token_post_mcp"]
             or ara_cfg.target_token_pre_mcp != mcp_dict["target_token_pre_mcp"]
         ):
@@ -519,11 +519,17 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
             *args: forwarded to parent class.
             **kwargs: Additional arguments.
 
+            revision (`str`, *optional*, defaults to `"main"`):
+                The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                identifier allowed by git.
+
         Returns:
             AraModelForSpeechSeq2Seq: Loaded model instance.
         """
         device_map = kwargs.pop("device_map", None)
         max_memory = kwargs.pop("max_memory", None)
+        revision = kwargs.pop("revision", "main")
 
         use_cache = kwargs.pop("use_cache", True)
         file_name = kwargs.pop("file_name", None)
@@ -536,7 +542,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         config_ara = config_result
 
         dvm_file = cls._get_llm_dvm_path(
-            pretrained_model_name_or_path, config_ara, file_name
+            pretrained_model_name_or_path, config_ara, file_name, revision
         )
 
         # Load generation config use parent class method

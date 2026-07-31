@@ -7,7 +7,7 @@ from copy import deepcopy
 import logging
 from abc import ABC
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any, cast
+from typing import Dict, List, Optional, Tuple, Union, Any, cast, Callable
 import time
 import os
 
@@ -15,6 +15,8 @@ import numpy as np
 import torch
 import torch as t
 import ctypes as c
+
+from huggingface_hub import hf_hub_download
 
 import transformers
 from transformers import (
@@ -116,21 +118,56 @@ class AraModel(PreTrainedModel):
             core.__del__()
 
     @classmethod
+    def download_model(
+        cls,
+        pretrained_model_name_or_path: str,
+        config: Optional["AraPretrainedConfig"] = None,
+        revision: str = "main",
+    ) -> Optional[Path]:
+
+        if not pretrained_model_name_or_path.startswith("nxp/"):
+            logging.warning(f"Use nxp hf hub model id to dowload from HF Hub!")
+            return None
+
+        local_dir = None
+        if config and "ara" in config:
+            if str(config.ara.dvm_path).endswith(".dvm"):
+                local_dir = (config.ara.dvm_path).rsplit("/", 1)[0]
+
+        if local_dir is None:
+            # remove NXP/ and - Ara240
+            model_name = pretrained_model_name_or_path.split("/", 1)
+            model_name = model_name[1]
+            model_name = model_name.rsplit("-", 1)
+            model_name = model_name[0]
+            local_dir = "/usr/share/llm/" + model_name
+
+        model_dvm_path = hf_hub_download(
+            repo_id=pretrained_model_name_or_path,
+            filename="model.dvm",
+            local_dir=local_dir,
+            revision=revision,
+        )
+        logging.info(f"Weights saved to: {model_dvm_path}")
+        return Path(model_dvm_path)
+
+    @classmethod
     def _get_llm_dvm_path(
         cls,
         pretrained_model_name_or_path: Union[str, Path, os.PathLike],
         config: Optional["AraPretrainedConfig"] = None,
         file_name: Optional[str] = None,
         subfolder: str = "",
+        revision: str = "main",
     ):
-        dvm_file = ""
+        dvm_file = None
         if file_name:
             if os.path.exists(file_name) and file_name.endswith(".dvm"):
                 dvm_file = Path(file_name)
             else:
                 logging.warning("file_name provided should be path to *.dvm file")
 
-        if dvm_file == "" and config:
+        if dvm_file is None and config:
             if "ara" in config:
                 if os.path.exists(config.ara.dvm_path) and str(
                     config.ara.dvm_path
@@ -140,11 +177,11 @@ class AraModel(PreTrainedModel):
                     logging.warning(
                         f"incorrect dvm file path in config : {config.ara.dvm_path}"
                     )
-                    logging.warning("dvm_path should is a path to *.dvm file")
+                    logging.warning("dvm_path should be a path to *.dvm file")
             else:
                 logging.warning("'ara' is not present in config object")
 
-        if dvm_file == "" and os.path.exists(pretrained_model_name_or_path):
+        if dvm_file is None and os.path.exists(pretrained_model_name_or_path):
             if str(pretrained_model_name_or_path).endswith(".dvm"):
                 dvm_file = Path(pretrained_model_name_or_path)
             else:
@@ -154,7 +191,7 @@ class AraModel(PreTrainedModel):
                 )
                 dvm_files = find_files_matching_pattern(
                     str(pretrained_model_name_or_path),
-                    r".*\.dvm",
+                    pattern=r".*\.dvm",
                     glob_pattern="**/*.dvm",
                     subfolder=subfolder,
                 )
@@ -169,7 +206,12 @@ class AraModel(PreTrainedModel):
                 if len(dvm_files) == 1:
                     dvm_file = dvm_files[0]
 
-        if dvm_file == "":
+        if dvm_file is None and type(pretrained_model_name_or_path) == str:
+            dvm_file = cls.download_model(
+                pretrained_model_name_or_path, config, revision
+            )
+
+        if dvm_file is None:
             raise FileNotFoundError(
                 f"Could not find any DVM model file here {pretrained_model_name_or_path}"
             )
@@ -314,7 +356,20 @@ class AraModel(PreTrainedModel):
                 self._generated_tokens_count - 1
             ) / self._token_generation_time
 
+        vit_time = getattr(self, "_vision_inference_time", 0)
+        prefill_time = getattr(self, "_prefill_time", 0)
         print("############### Performance Statistics #################")
+        if vit_time:
+            print("Vision Inference Time (ViT)    :", str(round(vit_time, 2)) + " sec ")
+        if prefill_time:
+            print(
+                "Prefill time                   :", str(round(prefill_time, 2)) + " sec"
+            )
+            if prefill_time > 0:
+                prefill_rate = round(num_tokens / prefill_time, 2)
+            else:
+                prefill_rate = 0.0
+            print("Prefill rate                   :", str(prefill_rate) + " tokens/sec")
         print("Time to first token (TTFT)     :", str(round(self._ttft, 2)) + " sec")
         print(
             "Generation time (without TTFT) :",
@@ -322,20 +377,19 @@ class AraModel(PreTrainedModel):
         )
         print(
             "Number of input tokens         :",
-            num_tokens,
-            " tokens",
+            str(round(num_tokens, 2)) + " tokens",
         )
         print(
             "Number of tokens generated     :",
             str(round(self._generated_tokens_count, 2)) + " tokens",
         )
         print(
-            "token rate                     :",
+            "Token Rate                     :",
             str(round(token_rate, 2)) + " tokens/sec",
         )
         print(
-            "temperature                    :",
-            str(round(self.core.get_device_temperature(), 2)) + " C",
+            "Temperature                    :",
+            str(round(self.core.get_device_temperature(), 2)) + " °C",
         )
         print("\n")
 
@@ -419,7 +473,8 @@ class AraModel(PreTrainedModel):
             Union[str, dict[str, Union[int, str, torch.device]], int, torch.device]
         ],
         max_memory: Optional[dict],
-    ) -> int:
+        vision_model=False,
+    ) -> list[int]:
         """
         handle device_map and decides which endpoint to load model on,
         based on device map.
@@ -429,6 +484,7 @@ class AraModel(PreTrainedModel):
                 None: use "auto"
                 "auto": check all endpoints one by one for available dram
                 <int> | "ara:<int>": load model on provided endpoint, space will not be checked in this case
+                [0, 1], list of endpoint for MCS (Multi Chip Shard) Model
             max_memory: not support yet # TODO
 
         Returns:
@@ -440,10 +496,14 @@ class AraModel(PreTrainedModel):
             device_map = "auto"
 
         # device_map dict, torch.device for layer level control not supported
-        if type(device_map) in [None, dict, torch.device]:
+        if type(device_map) in [None, torch.device]:
             logging.warning(f"device map : {device_map} , not supported")
             device_map = "auto"
             logging.debug(f"Update device map is : {device_map}")
+
+        if type(device_map) in [dict]:
+            # pyrefly: ignore [bad-assignment, missing-attribute]
+            device_map = list(dict.fromkeys(device_map.values()))
 
         # Handle device_map = "", "0", "cuda" etc
         if type(device_map) is str and device_map != "auto":
@@ -464,18 +524,35 @@ class AraModel(PreTrainedModel):
                     f"Update device map is : {device_map}, type : {type(device_map)}"
                 )
 
+        # model dvm size in bytes
+        model_size_in_bytes = os.path.getsize(model_path)
+        dram_stats = self.core.get_endpoint_dram_stats()
+        ep_list = self.core.get_endpoint_list()
+
+        if vision_model == False:
+            # load llm params from model.dvm
+            self.core.model_get_parameters_from_file(str(model_path))
+            no_of_shards = self.core.get_num_shards()
+        else:
+            no_of_shards = 1
+
+        if no_of_shards > len(ep_list):
+            logging.error(
+                f"Shards {no_of_shards} are more then availble endpoints {len(ep_list)}"
+            )
+            assert no_of_shards > len(ep_list)
+
         # Handle device map = "auto"
         if device_map == "auto":
-            dram_stats = self.core.get_endpoint_dram_stats()
             if dram_stats is None:
                 logging.warning(
                     "Failed to get DRAM stats for Endpoint, Using default Endpoint 0"
                 )
-                endpoint = 0
+                endpoint = [i for i in range(0, no_of_shards)]
             else:
-                model_size_in_bytes = os.path.getsize(model_path)
                 total_memory_required = (
-                    model_size_in_bytes + ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL
+                    model_size_in_bytes // no_of_shards
+                    + ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL
                 )
                 logging.info(
                     f"Model size: {human_readable_size(model_size_in_bytes)}, Additional required memory: {human_readable_size(ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL)}"
@@ -483,34 +560,37 @@ class AraModel(PreTrainedModel):
                 logging.info(
                     f"Total size required for Model: {human_readable_size(total_memory_required)}"
                 )
+                endpoint = []
                 for index in range(len(dram_stats)):
                     logging.info(
                         f"Endpoint : {index} has free space : {human_readable_size(dram_stats[index].ep_total_free_size)}"
                     )
                     if dram_stats[index].ep_total_free_size > total_memory_required:
-                        endpoint = index
+                        endpoint.append(index)
+                    if len(endpoint) == no_of_shards:
                         break
-                if endpoint is None:
-                    logging.warning("No Available Endpoint has enough free space.")
+                if no_of_shards == 1 and len(endpoint) < no_of_shards:
+                    logging.error("No Available Endpoint has enough free space.")
+                elif no_of_shards > 1 and len(endpoint) < no_of_shards:
+                    logging.error(
+                        f"Only {len(endpoint)} Endpoints has enough free space. Required {no_of_shards}!"
+                    )
 
         # Handle device map of type int
         if type(device_map) is int:
             if device_map < 0:
                 logging.warning(f"device specified : {device_map} , not available")
                 device_map = 0
-            dram_stats = self.core.get_endpoint_dram_stats()
+            if device_map >= len(ep_list):
+                logging.warning(
+                    f"provided device_map {device_map} is not supported, max device_map supported is upto {len(ep_list) - 1}"
+                )
+                logging.warning("setting device_map to default 0")
+                device_map = 0
             if dram_stats is None:
                 logging.warning("Failed to get DRAM stats for Endpoint")
-                ep_list = self.core.get_endpoint_list()
                 endpoint = device_map
-                if device_map >= len(ep_list):
-                    logging.info(
-                        f"provided device_map {device_map} is not supported, max device_map supported is upto {len(ep_list) - 1}"
-                    )
-                    logging.info("setting device_map to default 0")
-                    endpoint = 0
             else:
-                model_size_in_bytes = os.path.getsize(model_path)
                 total_memory_required = (
                     model_size_in_bytes + ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL
                 )
@@ -533,10 +613,64 @@ class AraModel(PreTrainedModel):
                         logging.warning(
                             f"Provided Endpoint:{device_map} Don't have enough free space."
                         )
+                else:
+                    logging.warning(
+                        f"provided device_map {device_map} is not supported, max device_map supported is upto {len(dram_stats) - 1}"
+                    )
+
+        if type(device_map) is list:
+            if len(device_map) > len(ep_list):
+                logging.error(
+                    f" provided endpoint count {len(device_map)} is more then endpoints available {len(ep_list)}"
+                )
+                assert len(device_map) <= len(ep_list)
+
+            for ep_id in device_map:
+                if ep_id >= len(ep_list) or ep_id < 0:
+                    logging.error(f"provided endpoint {ep_id} does exist!")
+                    assert ep_id < len(ep_list)
+
+            if dram_stats is None:
+                endpoint = device_map
+            else:
+                total_memory_required = (
+                    model_size_in_bytes // no_of_shards
+                    + ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL
+                )
+                logging.info(
+                    f"Model size: {human_readable_size(model_size_in_bytes)}, Additional required memory: {human_readable_size(ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL)}"
+                )
+                logging.info(
+                    f"Total size required for Model: {human_readable_size(total_memory_required)}"
+                )
+                for ep in device_map:
+                    if ep < len(dram_stats):
+                        logging.info(
+                            f"Endpoint : {ep} has free space : {human_readable_size(dram_stats[ep].ep_total_free_size)}"
+                        )
+                        if dram_stats[ep].ep_total_free_size <= total_memory_required:
+                            logging.error(
+                                f"Provided Endpoint:{ep} Don't have enough free space."
+                            )
+                            assert (
+                                dram_stats[ep].ep_total_free_size
+                                > total_memory_required
+                            )
+                endpoint = device_map
 
         assert endpoint is not None
 
-        return endpoint
+        endpoint_list = endpoint
+        if type(endpoint_list) is int:
+            endpoint_list = [endpoint_list]
+        elif type(endpoint_list) is list:
+            endpoint_list = endpoint_list
+
+        # pyrefly: ignore [bad-argument-type]
+        assert len(endpoint_list) == no_of_shards
+
+        # pyrefly: ignore [bad-return]
+        return endpoint_list
 
     def load_model(
         self,
@@ -562,8 +696,8 @@ class AraModel(PreTrainedModel):
             DvApiException: If session or endpoint creation fails.
         """
 
-        endpoint_id = self._handle_device_map(path, device_map, max_memory)
-        self.core.load_model(path, endpoint_id)
+        endpoint_list: list[int] = self._handle_device_map(path, device_map, max_memory)
+        self.core.load_model(path, endpoint_list)
 
         self.core.get_endpoint_dram_stats()
 
@@ -591,10 +725,16 @@ class AraModel(PreTrainedModel):
         """Load embedding lookup from model DVM file (counterpart to C++ function)"""
         # Convert device memory address to file offset by subtracting DVM_DDR_BASE_ADDR
         # This matches the C++ code: embedding_lookup_addr = llm_params->embedding_lookup_addr - AraCore::DVM_DDR_BASE_ADDR
-        embedding_lookup_addr = (
-            self.core.get_embedding_lookup_addr() - DVM_DDR_BASE_ADDR
-        )
-        scale_lookup_addr = self.core.get_scale_lookup_addr() - DVM_DDR_BASE_ADDR
+
+        if self.core.is_mcs_model() == True:
+            embedding_lookup_addr = self.core.get_embedding_lookup_addr()
+            scale_lookup_addr = self.core.get_scale_lookup_addr()
+        else:
+            embedding_lookup_addr = (
+                self.core.get_embedding_lookup_addr() - DVM_DDR_BASE_ADDR
+            )
+            scale_lookup_addr = self.core.get_scale_lookup_addr() - DVM_DDR_BASE_ADDR
+
         vocab_size = self.core.get_vocab_size()
         embedding_size = self.core.get_embedding_size()
         # Calculate table size: vocab_size * embedding_size * bytes_per_element
@@ -622,13 +762,6 @@ class AraModel(PreTrainedModel):
 
         # Check file size
         file_size = os.path.getsize(dvm_path)
-        logging.debug(f"DVM file size: {file_size} bytes")
-        logging.debug(
-            f"Requested table offset: {embedding_lookup_addr}, size: {table_size_bytes}"
-        )
-        logging.debug(
-            f"Requested scales offset: {scale_lookup_addr}, size: {scale_size_bytes}"
-        )
 
         # Load embedding table from file
         table_raw = self._load_from_file_with_offset_size(
@@ -690,3 +823,6 @@ class AraModel(PreTrainedModel):
         except Exception as e:
             logging.error(f"Reading file {file_path}: {e}")
             return None
+
+    def get_llm_params(self) -> dict[str, Any]:
+        return self.core.get_llm_params()
