@@ -4,8 +4,8 @@
 
 [![license](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE.txt)
 [![python](https://img.shields.io/badge/Python-%3E=3.12-green)](https://www.python.org/downloads/release/python-31013/)
-![optimum-ara-version](https://img.shields.io/badge/Optimum--Ara-v1.0.1-orange)
-![sdk-version](https://img.shields.io/badge/Ara%20SDK-r2.1.1-yellow)
+![optimum-ara-version](https://img.shields.io/badge/Optimum--Ara-v1.1.0-orange)
+![sdk-version](https://img.shields.io/badge/Ara%20SDK-r3.0-yellow)
 
 ---
 
@@ -79,8 +79,8 @@ The following models are integrated into the `optimum-ara` library:
 Clone this repository in your target platform. You can choose the version to download. We recommend using `uv` for ease of use and faster installation than `pip`. To install `uv`, follow steps from [Installation | uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-# Below command fetches Optimum Ara v1.0.1. Change this version depending on the SDK you are using
-git clone https://github.com/NXP/Optimum-Ara.git -b v1.0.1
+# Below command fetches Optimum Ara v1.1.0. Change this version depending on the SDK you are using
+git clone https://github.com/NXP/Optimum-Ara.git -b v1.1.0
 cd optimum-ara
 
 # Create venv using uv:
@@ -135,7 +135,7 @@ Optimum-Ara and Ara DNPU Runtime software stack is part of the official i.MX Emb
    # Create your venv
    uv venv
    # Install Optimum-Ara
-   uv pip install --no-progress /usr/share/python-wheels/optimum_ara-1.0.1-py3-none-any.whl
+   uv pip install --no-progress /usr/share/python-wheels/optimum_ara-1.1.0-py3-none-any.whl
    ```
 
 ## Run Example with Optimum-Ara
