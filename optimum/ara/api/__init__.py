@@ -8,7 +8,7 @@ import platform
 import importlib.util
 from pathlib import Path
 
-sdk_root = "/usr/share/rt-sdk-ara240"
+sdk_root = "/usr/share/ara2"
 if not os.path.exists(sdk_root):
     sdk_root = os.environ.get("DV_TGT_ROOT")
     if not sdk_root:
@@ -27,14 +27,15 @@ else:
         f"Unsupported architecture: {machine}. Only x86_64 and aarch64 are supported."
     )
 
-# Path to external dvapi.py based on architecture
-if Path(sdk_root).is_symlink():
-    dvapi_path = Path(sdk_root) / "include" / "dvapi.py"
-else:
-    dvapi_path = Path(sdk_root) / "art" / "linux" / arch / "include" / "dvapi.py"
+# dvapi.py lives at one of two layouts:
+#   - NXP BSP install:    ${sdk_root}/dvapi.py
+#   - Kinara SDK drop:    ${sdk_root}/art/linux/${arch}/include/dvapi.py
+flat_path = Path(sdk_root) / "dvapi.py"
+nested_path = Path(sdk_root) / "art" / "linux" / arch / "include" / "dvapi.py"
+dvapi_path = flat_path if flat_path.exists() else nested_path
 
 if not dvapi_path.exists():
-    raise FileNotFoundError(f"dvapi.py not found at {dvapi_path}")
+    raise FileNotFoundError(f"dvapi.py not found at {flat_path} or {nested_path}")
 
 # Dynamically load dvapi.py as optimum.ara.api.dvapi
 spec = importlib.util.spec_from_file_location("optimum.ara.api.dvapi", dvapi_path)
