@@ -16,6 +16,11 @@
 - [Optimum Ara](#optimum-ara)
   - [Table of Contents](#table-of-contents)
   - [Supported Models](#supported-models)
+    - [Llama Family](#llama-family)
+    - [Qwen2 Family](#qwen2-family)
+    - [Qwen2.5 Family](#qwen25-family)
+    - [Qwen3 Family](#qwen3-family)
+  - [Optimum-Ara Architecture](#optimum-ara-architecture)
   - [Prerequisite](#prerequisite)
   - [Install Optimum Ara from Source](#install-optimum-ara-from-source)
   - [Generate Wheel Package](#generate-wheel-package)
@@ -36,17 +41,47 @@ By importing `optimum.ara`, Ara DNPU specific model and configuration classes ar
 
 The following models are integrated into the `optimum-ara` library:
 
-| Model                   | Variants           | model_type          |
-| :---------------------- | :----------------- | :------------------ |
-| Llama 2                 | 7B                 | ara_llama           |
-| Llama 3.1               | 8B                 | ara_llama           |
-| Qwen 2                  | 7B                 | ara_qwen            |
-| Qwen 2.5                | coder-1.5B, 3B, 7B | ara_qwen            |
-| Qwen 2.5 Image          | 3B, 7B             | ara_qwen_image      |
-| Qwen 2.5 VL             | 3B, 7B             | ara_qwen_vl         |
-| Qwen2.5-VL (multimodal) | 3B, 7B             | ara_qwen_multimodal |
-| Qwen 3                  | .6B, 4B, 8B        |                     |
-| Qwen 3 VL               | 2B                 |                     |
+### Llama Family
+
+| Model                 | Type | Task            | model_type |
+| :-------------------- | :--- | :-------------- | :--------- |
+| Llama-2-7B            | LLM  | Text Generation | ara_llama  |
+| Llama-3.1-8B-Instruct | LLM  | Text Generation | ara_llama  |
+| Llama-3.2-3B-Instruct | LLM  | Text Generation | ara_llama  |
+
+### Qwen2 Family
+
+| Model             | Type | Task            | model_type |
+| :---------------- | :--- | :-------------- | :--------- |
+| Qwen2-7B-Instruct | LLM  | Text Generation | ara_qwen   |
+
+### Qwen2.5 Family
+
+| Model                       | Type | Task                                     | model_type          |
+| :-------------------------- | :--- | :--------------------------------------- | :------------------ |
+| Qwen2-7B-Instruct           | LLM  | Text Generation                          | ara_qwen            |
+| Qwen2.5-3B-Instruct         | LLM  | Text Generation                          | ara_qwen            |
+| Qwen2.5-7B-Instruct         | LLM  | Text Generation                          | ara_qwen            |
+| Qwen2.5-Coder-1.5B-Instruct | LLM  | Text Generation                          | ara_qwen            |
+| Qwen2.5-VL-3B-Instruct      | VLM  | Image-Text-to-Text                       | ara_qwen_image      |
+| Qwen2.5-VL-3B-Instruct      | VLM  | Video-Text-to-Text                       | ara_qwen_vl         |
+| Qwen2.5-VL-3B-Instruct      | VLM  | Image-Text-to-Text<br>Video-Text-to-Text | ara_qwen_multimodal |
+| Qwen2.5-VL-7B-Instruct      | VLM  | Image-Text-to-Text                       | ara_qwen_image      |
+| Qwen2.5-VL-7B-Instruct      | VLM  | Video-Text-to-Text                       | ara_qwen_vl         |
+| Qwen2.5-VL-7B-Instruct      | VLM  | Image-Text-to-Text<br>Video-Text-to-Text | ara_qwen_multimodal |
+
+### Qwen3 Family
+
+| Model                | Type | Task                                     | model_type           |
+| :------------------- | :--- | :--------------------------------------- | :------------------- |
+| Qwen3-0.6B           | LLM  | Text Generation                          | ara_qwen             |
+| Qwen3-4B             | LLM  | Text Generation                          | ara_qwen             |
+| Qwen3-8B             | LLM  | Text Generation                          | ara_qwen             |
+| Qwen3-VL-2B-Instruct | VLM  | Image-Text-to-Text                       | ara_qwen3_image      |
+| Qwen3-VL-2B-Instruct | VLM  | Video-Text-to-Text                       | ara_qwen3_vl         |
+| Qwen3-VL-2B-Instruct | VLM  | Image-Text-to-Text<br>Video-Text-to-Text | ara_qwen3_multimodal |
+
+## Optimum-Ara Architecture
 
 ![Optimum Ara Architecture](docs/assets/optimum-ara-apis-architecture.png)
 
@@ -247,11 +282,11 @@ For more info check the [README.md](./examples/Readme.md) inside of `examples/`.
 
 ## Release Notes
 
-| Optimum-Ara Version | Ara SDK Version | i.MX BSP Version | Notes                  |
-| ------------------- | --------------- | ---------------- | ---------------------- |
-| 1.0.0               | r2.1.1          | lf-6.18.20_2.0.0 | Official Q2'26 Release |
-| 1.0.1               | r2.1.1          | -                | Hot fix release        |
-| 1.1.0               | r3.0            | lf-6.18.37_2.1.0 | Q3'26 Release          |
+| Optimum-Ara | Ara SDK | i.MX BSP         | Notes                  |
+| ----------- | ------- | ---------------- | ---------------------- |
+| 1.0.0       | r2.1.1  | lf-6.18.20_2.0.0 | i.MX BSP Q2'26 Release |
+| 1.0.1       | r2.1.1  | -                | Hot fix release        |
+| 1.1.0       | r3.0    | lf-6.18.37_2.1.0 | i.MX BSP Q3'26 Release |
 
 ## License
 
