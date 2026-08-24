@@ -2,30 +2,30 @@
   "SPDXID": "SPDXRef-DOCUMENT",
   "spdxVersion": "SPDX-2.3",
   "creationInfo": {
-    "created": "2026-06-05T20:42:43Z",
+    "created": "2026-08-24T17:36:22Z",
     "creators": [
       "Organization: NXP"
     ],
-    "licenseListVersion": "3.26"
+    "licenseListVersion": "3.28"
   },
-  "name": "optimum-ara-1.0.1",
+  "name": "optimum-ara-1.1.0",
   "dataLicense": "CC0-1.0",
-  "documentNamespace": "https://nxp.com/spdx/03e2232e-2d12-4dcf-8157-bcd9f300f422",
+  "documentNamespace": "https://nxp.com/spdx/a0b67ef5-41d2-4ac5-ba3a-634257daf811",
   "packages": [
     {
-      "SPDXID": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422",
+      "SPDXID": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811",
       "name": "optimum-ara",
-      "versionInfo": "1.0.1",
+      "versionInfo": "1.1.0",
       "licenseConcluded": "(Apache-2.0)",
       "licenseDeclared": "(Apache-2.0)",
-      "downloadLocation": "https://github.com/NXP/optimum-ara",
+      "downloadLocation": "https://github.com/NXP/Optimum-Ara",
       "originator": "Organization: NXP",
       "supplier": "NOASSERTION",
       "externalRefs": [],
       "filesAnalyzed": false
     },
     {
-      "SPDXID": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422---750f5739-545d-427b-a358-e9f32a19e08e",
+      "SPDXID": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811---750f5739-545d-427b-a358-e9f32a19e08e",
       "name": "huggingface/optimum",
       "versionInfo": "v2.1.0",
       "licenseConcluded": "Apache-2.0",
@@ -46,57 +46,18 @@
         }
       ],
       "filesAnalyzed": false
-    },
-    {
-      "SPDXID": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422---bc02afc2-35e8-4deb-8ec7-6f2f60ffdd70",
-      "name": "transformers",
-      "versionInfo": "4.57.6",
-      "licenseConcluded": "Apache-2.0",
-      "licenseDeclared": "Apache-2.0",
-      "homepage": "https://github.com/huggingface/transformers",
-      "downloadLocation": "NOASSERTION",
-      "originator": "Organization: huggingface",
-      "supplier": "NOASSERTION",
-      "externalRefs": [
-        {
-          "referenceCategory": "OTHER",
-          "referenceLocator": "6c85dcac-e21c-488f-b4f1-bf01e9958a96",
-          "referenceType": "BlackDuck-ComponentOrigin"
-        },
-        {
-          "referenceCategory": "SECURITY",
-          "referenceLocator": "cpe:2.3:a:huggingface:transformers:4.57.6:*:*:*:*:*:*:*",
-          "referenceType": "cpe23Type"
-        },
-        {
-          "referenceCategory": "SECURITY",
-          "referenceLocator": "cpe:2.3:a:pypi_package:transformers:4.57.6:*:*:*:*:*:*:*",
-          "referenceType": "cpe23Type"
-        },
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceLocator": "pkg:github/huggingface/transformers@v4.57.6",
-          "referenceType": "purl"
-        }
-      ],
-      "filesAnalyzed": false
     }
   ],
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
       "relationshipType": "DESCRIBES",
-      "relatedSpdxElement": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422"
+      "relatedSpdxElement": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811"
     },
     {
-      "spdxElementId": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422",
+      "spdxElementId": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811",
       "relationshipType": "CONTAINS",
-      "relatedSpdxElement": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422---750f5739-545d-427b-a358-e9f32a19e08e"
-    },
-    {
-      "spdxElementId": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422",
-      "relationshipType": "CONTAINS",
-      "relatedSpdxElement": "SPDXRef-package-03e2232e-2d12-4dcf-8157-bcd9f300f422---bc02afc2-35e8-4deb-8ec7-6f2f60ffdd70"
+      "relatedSpdxElement": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811---750f5739-545d-427b-a358-e9f32a19e08e"
     }
   ]
 }
