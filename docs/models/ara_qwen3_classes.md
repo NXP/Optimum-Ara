@@ -3,7 +3,6 @@
 Qwen3-VL is a multimodal large language model from the Qwen series that can understand text, images, and videos. It supports visual question answering, image captioning, document understanding, and arbitrary system prompts.
 
 Qwen3-VL DVMs are available in three modalities, each tied to a specific rope table baked at compile time:
-
 - **video** — inference on video with a fixed frame count (16 frames)
 - **image** — inference on images only
 - **multimodal** — inference on image, video (any duration, limited by context_size, usually 4096), and text-only; also supports arbitrary system prompts
@@ -11,20 +10,17 @@ Qwen3-VL DVMs are available in three modalities, each tied to a specific rope ta
 ## Classes
 
 ### Config classes
-
 - [AraQwen3_VL](#araqwen3_vl)
 - [AraQwen3VLConfig](#araqwen3vlconfig)
 - [AraQwen3ImageConfig](#araqwen3imageconfig)
 - [AraQwen3MultiModalConfig](#araqwen3multimodalconfig)
 
 ### Model classes
-
 - [AraQwen3VLForConditionalGeneration](#araqwen3vlforconditionalgeneration)
 - [AraQwen3ImageForConditionalGeneration](#araqwen3imageforconditionalgeneration)
 - [AraQwen3MultiModalForConditionalGeneration](#araqwen3multimodalforconditionalgeneration)
 
 ### Processor class
-
 - [Qwen3VLProcessor](#qwen3vlprocessor)
 
 ---
@@ -43,11 +39,11 @@ class AraQwen3_VL(AraConfig):
 
 ### Config Parameters:
 
-| Parameter                     | Description                                                           |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `vision_model_path`           | Path to the Vision model `.dvm` file.                                 |
-| `rope_table_path`             | Path to the rope table `.dat` file required for vision inference.     |
-| `vision_pos_table_path`       | Path to the vision position table `.dat` file (Qwen3-specific).       |
+| Parameter | Description |
+| --------- | ----------- |
+| `vision_model_path` | Path to the Vision model `.dvm` file. |
+| `rope_table_path` | Path to the rope table `.dat` file required for vision inference. |
+| `vision_pos_table_path` | Path to the vision position table `.dat` file (Qwen3-specific). |
 | `vision_pos_table_scale_path` | Path to the vision position table scale `.dat` file (Qwen3-specific). |
 
 Checkout `AraConfig` class for more info, refer [AraPretrainedConfig](../base_classes/ara_pretrained_config.md).
@@ -74,9 +70,9 @@ Checkout `AraConfig` class for more info, refer [AraPretrainedConfig](../base_cl
 
 ### Config Parameters:
 
-| Parameter        | Description                                         |
-| ---------------- | --------------------------------------------------- |
-| `model_type`     | `"ara_qwen3_vl"`                                    |
+| Parameter | Description |
+| --------- | ----------- |
+| `model_type` | `"ara_qwen3_vl"` |
 | `video_token_id` | Token ID for video placeholders (default: `151656`) |
 | `image_token_id` | Token ID for image placeholders (default: `151655`) |
 
@@ -104,9 +100,9 @@ config = AraQwen3VLConfig.from_pretrained("./models/qwen3-vl/")
 
 ### Config Parameters:
 
-| Parameter        | Description                                         |
-| ---------------- | --------------------------------------------------- |
-| `model_type`     | `"ara_qwen3_image"`                                 |
+| Parameter | Description |
+| --------- | ----------- |
+| `model_type` | `"ara_qwen3_image"` |
 | `video_token_id` | Token ID for video placeholders (default: `151656`) |
 | `image_token_id` | Token ID for image placeholders (default: `151655`) |
 
@@ -127,11 +123,11 @@ config = AraQwen3VLConfig.from_pretrained("./models/qwen3-vl/")
 
 ### Config Parameters:
 
-| Parameter          | Description                                                                    |
-| ------------------ | ------------------------------------------------------------------------------ |
-| `model_type`       | `"ara_qwen3_multimodal"`                                                       |
-| `video_token_id`   | Token ID for video placeholders (default: `151656`)                            |
-| `image_token_id`   | Token ID for image placeholders (default: `151655`)                            |
+| Parameter | Description |
+| --------- | ----------- |
+| `model_type` | `"ara_qwen3_multimodal"` |
+| `video_token_id` | Token ID for video placeholders (default: `151656`) |
+| `image_token_id` | Token ID for image placeholders (default: `151655`) |
 | `sys_pad_token_id` | Token ID used to pad system prompt to rope alignment boundary (default: `220`) |
 
 ---
@@ -144,14 +140,12 @@ config = AraQwen3VLConfig.from_pretrained("./models/qwen3-vl/")
 2. Language model handles text generation with merged vision+text embeddings.
 
 Qwen3-VL differs from Qwen2.5-VL in:
-
 - **5 vision DVM inputs** (pixels, scale, rope table, vision pos table, vision pos table scale) vs 3 in Qwen2.5
 - **8 vision DVM outputs** (main features+scale + ds0/ds1/ds2 features+scale) vs 2 in Qwen2.5
 - **Frame divisor** of 16 (vs 28 for Qwen2.5)
 - **quantize()** accepts `torch.Tensor` directly (vs `np.ndarray` with manual `*32` scaling in Qwen2.5)
 
 Key attributes:
-
 - `PATCHES_ALONG_HEIGHT = 12`
 - `PATCHES_ALONG_WIDTH = 12`
 - `PATCH_SIZE = 16`
@@ -193,20 +187,13 @@ model = AraQwen3ImageForConditionalGeneration.from_pretrained("./models/qwen3-im
 ```python
 from optimum.ara import AraQwen3MultiModalForConditionalGeneration
 
-model = AraQwen3MultiModalForConditionalGeneration.from_pretrained(
-    "./models/qwen3-vl-multimodal/"
-)
+model = AraQwen3MultiModalForConditionalGeneration.from_pretrained("./models/qwen3-vl-multimodal/")
 ```
 
 ### Full usage example (from `examples/qwen3_vl_multimodal.py`):
 
 ```python
-from transformers import (
-    AutoConfig,
-    AutoModelForImageTextToText,
-    AutoProcessor,
-    TextStreamer,
-)
+from transformers import AutoConfig, AutoModelForImageTextToText, AutoProcessor, TextStreamer
 from optimum.ara import (
     AraQwen3MultiModalConfig,
     AraQwen3MultiModalForConditionalGeneration,
@@ -232,10 +219,7 @@ streamer = TextStreamer(processor.tokenizer, skip_prompt=True, skip_special_toke
 VIDEO_PATH = "path/to/video.mp4"
 resized_video_path = Qwen3VLProcessor.resize_video(VIDEO_PATH)
 messages = [
-    {
-        "role": "system",
-        "content": [{"type": "text", "text": "You are a helpful assistant"}],
-    },
+    {"role": "system", "content": [{"type": "text", "text": "You are a helpful assistant"}]},
     {
         "role": "user",
         "content": [
@@ -245,29 +229,18 @@ messages = [
     },
 ]
 processed_inputs = processor.apply_chat_template(
-    messages,
-    tokenize=True,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt",
+    messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt"
 )
 model.generate(
-    **processed_inputs,
-    generation_config=generation_config,
-    max_new_tokens=512,
-    do_sample=False,
-    stream=True,
-    streamer=streamer,
+    **processed_inputs, generation_config=generation_config,
+    max_new_tokens=512, do_sample=False, stream=True, streamer=streamer,
 )
 
 # --- Image inference ---
 IMAGE_PATH = "path/to/image.jpg"
 resized_image_path = Qwen3VLProcessor.resize_image(IMAGE_PATH)
 messages = [
-    {
-        "role": "system",
-        "content": [{"type": "text", "text": "You are a helpful assistant"}],
-    },
+    {"role": "system", "content": [{"type": "text", "text": "You are a helpful assistant"}]},
     {
         "role": "user",
         "content": [
@@ -277,41 +250,24 @@ messages = [
     },
 ]
 processed_inputs = processor.apply_chat_template(
-    messages,
-    tokenize=True,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt",
+    messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt"
 )
 model.generate(
-    **processed_inputs,
-    generation_config=generation_config,
-    max_new_tokens=512,
-    do_sample=False,
-    stream=True,
-    streamer=streamer,
+    **processed_inputs, generation_config=generation_config,
+    max_new_tokens=512, do_sample=False, stream=True, streamer=streamer,
 )
 
 # --- Text-only inference ---
 messages = [
-    {
-        "role": "system",
-        "content": [{"type": "text", "text": "You are a helpful assistant"}],
-    },
+    {"role": "system", "content": [{"type": "text", "text": "You are a helpful assistant"}]},
     {"role": "user", "content": [{"type": "text", "text": "Tell me a joke."}]},
 ]
 processed_inputs = processor.apply_chat_template(
-    messages,
-    tokenize=True,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt",
+    messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt"
 )
 model.generate(
-    **processed_inputs,
-    generation_config=generation_config,
-    stream=True,
-    streamer=streamer,
+    **processed_inputs, generation_config=generation_config,
+    stream=True, streamer=streamer,
 )
 ```
 
@@ -323,20 +279,20 @@ model.generate(
 
 ### Methods:
 
-| Method                                                          | Description                                                                                    |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `resize_image(input_path, target_width=384, target_height=384)` | Resizes an image to the target dimensions and returns a temp file path.                        |
-| `resize_video(input_path, target_width=384, target_height=384)` | Resizes a video to the target dimensions and returns a temp file path.                         |
-| `open_image(source)`                                            | Opens an image from a local path or URL, returns a PIL `Image`.                                |
-| `quantize(inp_tensor: torch.Tensor)`                            | Quantizes a `torch.Tensor` to int8 with per-group-of-64 scales. Returns `(scales, quantized)`. |
-| `dequantize(quantized, scales, shape)`                          | Dequantizes int8 data back to float using scales and target shape.                             |
+| Method | Description |
+| ------ | ----------- |
+| `resize_image(input_path, target_width=384, target_height=384)` | Resizes an image to the target dimensions and returns a temp file path. |
+| `resize_video(input_path, target_width=384, target_height=384)` | Resizes a video to the target dimensions and returns a temp file path. |
+| `open_image(source)` | Opens an image from a local path or URL, returns a PIL `Image`. |
+| `quantize(inp_tensor: torch.Tensor)` | Quantizes a `torch.Tensor` to int8 with per-group-of-64 scales. Returns `(scales, quantized)`. |
+| `dequantize(quantized, scales, shape)` | Dequantizes int8 data back to float using scales and target shape. |
 
 ### Processing constants:
 
-| Constant   | Value     |
-| ---------- | --------- |
+| Constant | Value |
+| -------- | ----- |
 | Image size | `384x384` |
-| Video FPS  | `2`       |
+| Video FPS | `2` |
 
 ### Example:
 
@@ -351,7 +307,6 @@ resized_path = Qwen3VLProcessor.resize_video("path/to/video.mp4")
 
 # quantize/dequantize (used internally)
 import torch
-
 tensor = torch.randn(1024)
 scales, quantized = Qwen3VLProcessor.quantize(tensor)
 restored = Qwen3VLProcessor.dequantize(quantized.numpy(), scales.numpy(), tensor.shape)
@@ -363,10 +318,10 @@ restored = Qwen3VLProcessor.dequantize(quantized.numpy(), scales.numpy(), tensor
 
 All Qwen3 classes are registered with the HuggingFace transformers library for seamless integration:
 
-| model_type             | AutoConfig                 | AutoModelForImageTextToText                  | AutoModelForVision2Seq                       |
-| ---------------------- | -------------------------- | -------------------------------------------- | -------------------------------------------- |
-| `ara_qwen3_vl`         | `AraQwen3VLConfig`         | `AraQwen3VLForConditionalGeneration`         | `AraQwen3VLForConditionalGeneration`         |
-| `ara_qwen3_image`      | `AraQwen3ImageConfig`      | `AraQwen3ImageForConditionalGeneration`      | —                                            |
+| model_type | AutoConfig | AutoModelForImageTextToText | AutoModelForVision2Seq |
+| ---------- | ---------- | --------------------------- | ---------------------- |
+| `ara_qwen3_vl` | `AraQwen3VLConfig` | `AraQwen3VLForConditionalGeneration` | `AraQwen3VLForConditionalGeneration` |
+| `ara_qwen3_image` | `AraQwen3ImageConfig` | `AraQwen3ImageForConditionalGeneration` | — |
 | `ara_qwen3_multimodal` | `AraQwen3MultiModalConfig` | `AraQwen3MultiModalForConditionalGeneration` | `AraQwen3MultiModalForConditionalGeneration` |
 
 This allows loading via `AutoConfig.from_pretrained()` and `AutoModelForImageTextToText.from_pretrained()` by specifying the correct model path.

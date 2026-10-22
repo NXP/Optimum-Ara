@@ -31,35 +31,39 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
         self.PATCHES_ALONG_WIDTH = 12
         self.PATCH_SIZE = 28
         self.NUM_FRAMES = kwargs.pop("NUM_FRAMES", 16)
-        self.NUM_TKNS_PER_FRAME = self.PATCHES_ALONG_HEIGHT * self.PATCHES_ALONG_WIDTH
+        self.NUM_TKNS_PER_FRAME = (
+            self.PATCHES_ALONG_HEIGHT * self.PATCHES_ALONG_WIDTH
+        )
         is_image_model = kwargs.pop("is_image_model", False)
         super().__init__(*args, **kwargs, is_image_model=is_image_model)
 
     def _load_vision_model_inputs(self):
         input_scale_path = getattr(self.config.ara, "input_scale_path", None)
-        assert input_scale_path, "Need to pass an input file for input scale path"
-        assert os.path.exists(input_scale_path), (
-            f"Provided path for input scale does not exist -> {input_scale_path}"
-        )
-
-        self.input_scale = np.fromfile(input_scale_path, dtype=np.int8)
+        assert (
+            input_scale_path
+        ), "Need to pass an input file for input scale path"
+        assert (
+            os.path.exists(input_scale_path)
+        ), f"Provided path for input scale does not exist -> {input_scale_path}"
+        
+        self.input_scale =  np.fromfile(input_scale_path, dtype=np.int8)
         logging.info(f"Loaded input scale from the following path: {input_scale_path}")
-
+        
         rope_table_path = getattr(self.config.ara, "rope_table_path", None)
-        assert rope_table_path, "Need to pass an input file for input scale path"
-        assert os.path.exists(rope_table_path), (
-            f"Provided path for rope table does not exist -> {rope_table_path}"
-        )
-
-        self.rope_table = np.fromfile(rope_table_path, dtype=np.int8)
+        assert (
+            rope_table_path
+        ), "Need to pass an input file for input scale path"
+        assert (
+            os.path.exists(rope_table_path)
+        ), f"Provided path for rope table does not exist -> {rope_table_path}"
+        
+        self.rope_table =  np.fromfile(rope_table_path, dtype=np.int8)
         logging.info(f"Loaded rope table from the following path: {rope_table_path}")
 
     def _vision_inference(self, pixel_values_inflated: np.ndarray) -> list:
         input_tensors = []
 
-        input_tensors.append(
-            self.core.get_dv_tensor(pixel_values_inflated, params=None)
-        )
+        input_tensors.append(self.core.get_dv_tensor(pixel_values_inflated, params=None))
         input_tensors.append(self.core.get_dv_tensor(self.input_scale, params=None))
         input_tensors.append(self.core.get_dv_tensor(self.rope_table, params=None))
 
@@ -67,8 +71,7 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
             self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8
         )
         vision_output_scale: np.ndarray = np.empty(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64,
-            dtype=np.int8,
+            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64, dtype=np.int8
         )
 
         outputs = [vision_output, vision_output_scale]
@@ -96,7 +99,7 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
             token_embeddings = self.embedding(token_tensor)
             decoded_text = f"Generated {len(token_ids)} tokens with embeddings shape {token_embeddings.shape}"
             return decoded_text
-
+            
         except Exception as e:
             return f"Generated {len(token_ids)} tokens (decoding failed)"
 
@@ -141,9 +144,7 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
             video_scales.append(torch.from_numpy(frame_scales))
 
         if not video_embeds:
-            raise RuntimeError(
-                f"Vision inference resulted in 0 features. Check num_frames ({num_frames}) and input shape."
-            )
+             raise RuntimeError(f"Vision inference resulted in 0 features. Check num_frames ({num_frames}) and input shape.")
 
         video_scales = torch.cat(video_scales, dim=0)
         video_embeds = torch.cat(video_embeds, dim=0)
@@ -161,13 +162,11 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
         vision_output = outputs[0]
 
         return (vision_output, vision_output_scale)
-
+    
     def generate(
         self,
         inputs: Optional[torch.Tensor] = None,
-        generation_config: Optional[
-            Union[GenerationConfig, AraGenerationConfig]
-        ] = None,
+        generation_config: Optional[Union[GenerationConfig, AraGenerationConfig]] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Any] = None,
@@ -178,14 +177,15 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
         use_model_defaults: Optional[bool] = None,
         custom_generate: Optional[Union[str, Callable]] = None,
-        **kwargs,
+        **kwargs
     ) -> Union[GenerateDecoderOnlyOutput, torch.LongTensor, Any]:
         input_ids = kwargs.pop("input_ids", None)
         input_ids = inputs if inputs is not None else cast(torch.Tensor, input_ids)
-
+        
         # checking if system prompt is hardcoded
         SYSTEM_PROMPT_ID = torch.tensor(
-            [151644, 8948, 198, 2610, 525, 264, 10950, 17847, 13], dtype=torch.int64
+            [151644, 8948, 198, 2610, 525, 264, 10950, 17847, 13],
+            dtype=torch.int64
         )
         curr_sys_prompt_len = (
             (input_ids[0] == 151645).nonzero(as_tuple=True)[0][0].item()
@@ -201,7 +201,7 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
                 ],
                 dim=1,
             )
-
+        
         kwargs.update({"input_ids": input_ids})
         return super().generate(
             inputs,
@@ -218,20 +218,17 @@ class AraQwen2_5_VLForConditionalGeneration(AraModelForVisualCausalLM):
             custom_generate,
             **kwargs,
         )
-
+    
 
 class AraQwen2_5_ImageForConditionalGeneration(AraQwen2_5_VLForConditionalGeneration):
     config_class = AraQwen2_5ImageConfig
-
     def __init__(self, *args, **kwargs):
         is_image_model = True
 
         super().__init__(*args, **kwargs, NUM_FRAMES=2, is_image_model=is_image_model)
 
 
-class AraQwen2_5_MultiModalForConditionalGeneration(
-    AraQwen2_5_VLForConditionalGeneration
-):
+class AraQwen2_5_MultiModalForConditionalGeneration(AraQwen2_5_VLForConditionalGeneration):
     config_class = AraQwen2_5MultiModalConfig
 
     def __init__(self, *args, **kwargs):

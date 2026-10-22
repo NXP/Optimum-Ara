@@ -23,7 +23,6 @@ processor = LlavaProcessor.from_pretrained("llava-hf/llama3-llava-next-8b-hf")
 
 tokenizer = cast(Any, processor).tokenizer
 
-
 def describe_image(image: Image.Image, prompt: str):
     """
     Generator function that yields tokens as they are generated.
@@ -34,29 +33,25 @@ def describe_image(image: Image.Image, prompt: str):
         return
 
     # Prepare conversation
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {"type": "image", "image": image},
-            ],
-        }
-    ]
+    messages = [{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": prompt},
+            {"type": "image", "image": image},
+        ],
+    }]
 
     # Process inputs
-    text = processor.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
-    )
+    text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     # Cast image to Any to satisfy processor signature stubs
     # pyrefly: ignore [unexpected-keyword]
-    processed_inputs = processor(
-        text=text, images=cast(Any, [image]), padding=True, return_tensors="pt"
-    )
+    processed_inputs = processor(text=text, images=cast(Any, [image]), padding=True, return_tensors="pt")
 
     # Create TextIteratorStreamer to capture tokens as they're generated
     streamer = TextIteratorStreamer(
-        tokenizer, skip_prompt=True, skip_special_tokens=True
+        tokenizer,
+        skip_prompt=True,
+        skip_special_tokens=True
     )
 
     # Prepare generation arguments
@@ -78,7 +73,6 @@ def describe_image(image: Image.Image, prompt: str):
 
     # Ensure thread completes
     thread.join()
-
 
 with gr.Blocks() as demo:
     gr.Markdown("## LLaVA Image Description Demo (Streaming)")

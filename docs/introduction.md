@@ -8,20 +8,20 @@ By importing `optimum.ara`, Ara-specific model and configuration classes are reg
 
 Supported model families include:
 
-| Model               | Variants           | model_type           |
-| :------------------ | :----------------- | -------------------- |
-| Llama 2             | 7B                 | ara_llama            |
-| Llama 3.1           | 8B                 | ara_llama            |
-| Llama 3.2           | 3B                 | ara_llama            |
-| Qwen 2              | 7B                 | ara_qwen             |
-| Qwen 2.5            | coder-1.5B, 3B, 7B | ara_qwen             |
-| Qwen 2.5 Image      | 3B, 7B             | ara_qwen_image       |
-| Qwen 2.5 VL (video) | 3B, 7B             | ara_qwen_vl          |
-| Qwen 2.5 Multimodal | 3B, 7B             | ara_qwen_multimodal  |
-| Qwen 3              | .6B, 4B, 8B        | ara_qwen             |
-| Qwen 3 Multimodal   | 2B                 | ara_qwen3_multimodal |
-| Llava               | 8B                 | ara_llava            |
-| Whisper             | Medium             | ara_whisper          |
+| Model               | Variants            | model_type          |
+|:--------------------|:--------------------|---------------------|
+| Llama 2             | 7B                  | ara_llama           |
+| Llama 3.1           | 8B                  | ara_llama           |
+| Llama 3.2           | 3B                  | ara_llama           |
+| Qwen 2              | 7B                  | ara_qwen            |
+| Qwen 2.5            | coder-1.5B, 3B, 7B  | ara_qwen            |
+| Qwen 2.5 Image      | 3B, 7B              | ara_qwen_image      |
+| Qwen 2.5 VL (video) | 3B, 7B              | ara_qwen_vl         |
+| Qwen 2.5 Multimodal | 3B, 7B              | ara_qwen_multimodal |
+| Qwen 3              | .6B, 4B, 8B         | ara_qwen            |
+| Qwen 3 Multimodal   | 2B                  | ara_qwen3_multimodal|
+| Llava               | 8B                  | ara_llava           |
+| Whisper             | Medium              | ara_whisper         |
 
 For API details, see [Optimum-Ara APIs](./optimum-ara-apis.md).
 
@@ -81,27 +81,25 @@ At runtime, Optimum-Ara:
 
 ### Prerequisites
 
-| Requirement           | Details                                                                                  |
-| :-------------------- | :--------------------------------------------------------------------------------------- |
-| **Hardware**          | Ara accelerator with hardware bring-up completed                                         |
-| **Python**            | Version >= 3.10 (virtual environment recommended)                                        |
-| **Ara SDK**           | Runtime SDK providing `dvapi`, client libraries, and the proxy service                   |
-| **Model assets**      | Compiled `.dvm` file, `config.json`, `generation_config.json`, and a tokenizer/processor |
-| **Host architecture** | x86_64 or aarch64 Linux                                                                  |
+| Requirement | Details |
+|:------------|:--------|
+| **Hardware** | Ara accelerator with hardware bring-up completed |
+| **Python** | Version >= 3.10 (virtual environment recommended) |
+| **Ara SDK** | Runtime SDK providing `dvapi`, client libraries, and the proxy service |
+| **Model assets** | Compiled `.dvm` file, `config.json`, `generation_config.json`, and a tokenizer/processor |
+| **Host architecture** | x86_64 or aarch64 Linux |
 
 ### Setup steps
 
 1. **Install Optimum-Ara**
 
    From a built wheel:
-
    ```bash
    cd <sdk>/art/linux/optimum-ara/
    pip install optimum_ara-<version>.whl --extra-index-url https://download.pytorch.org/whl/cpu
    ```
 
    From source (development):
-
    ```bash
    git clone https://github.com/NXP/Optimum-Ara.git
    cd Optimum-Ara
@@ -136,7 +134,6 @@ At runtime, Optimum-Ara:
    ```
 
    For Hugging Face Hub tokenizers (e.g., Llama), log in first:
-
    ```bash
    pip install -U huggingface_hub
    huggingface-cli login
@@ -157,7 +154,6 @@ Optimum-Ara and its dependencies are distributed through three complementary cha
 **Contents:** Python library source code, examples, documentation, model configuration templates, tests.
 
 **When to use:**
-
 - Application development and integration
 - Contributing changes or running unit tests
 - Exploring example scripts and API documentation
@@ -170,14 +166,12 @@ The git repository does **not** include the Ara SDK, compiled `.dvm` model binar
 **Location:** Ara runtime SDK, referenced via `DV_TGT_ROOT` or the default path `/usr/share/rt-sdk-ara240`.
 
 **Contents:**
-
 - `art/linux/<arch>/include/dvapi.py` — Python client API loaded dynamically by Optimum-Ara
 - `art/linux/<arch>/lib/` — Client libraries (`libaraclient_*.so`)
 - `art/linux/<arch>/proxy/` — Proxy service executable and configuration
 - `art/config/` — Proxy and platform configuration files
 
 **When to use:**
-
 - Any host-side development or inference session (x86_64 or aarch64)
 - Running the proxy service that connects Python applications to Ara hardware
 - CI, validation, and lab environments where the SDK is installed separately from the Python library
@@ -191,21 +185,20 @@ Optimum-Ara depends on the SDK at import time. If neither the default BSP path n
 **Contents:** Full platform software stack for embedded deployment, including the Ara SDK, drivers, proxy, and optionally pre-installed Optimum-Ara packages and model binaries.
 
 **When to use:**
-
 - On-device / edge deployment on aarch64 target boards
 - Production environments where SDK paths and services are pre-configured
 - Scenarios where you want a turnkey stack without manually assembling SDK, proxy, and Python dependencies
 
 ### Comparison
 
-| Aspect                         | Git Repository          | SDK Folder                     | BSP                             |
-| :----------------------------- | :---------------------- | :----------------------------- | :------------------------------ |
-| **Primary audience**           | Developers              | All runtime users              | Embedded / production deployers |
-| **Optimum-Ara Python package** | Source / build yourself | Not included                   | Often pre-installed             |
-| **Ara SDK & proxy**            | Not included            | Included                       | Included (pre-configured)       |
-| **Model `.dvm` binaries**      | Config only             | Not included                   | May be pre-installed            |
-| **Typical host**               | Dev machine             | Dev or lab host                | Target board (aarch64)          |
-| **Configuration**              | Manual setup            | Set `DV_TGT_ROOT`, start proxy | Default paths, minimal setup    |
+| Aspect | Git Repository | SDK Folder | BSP |
+|:-------|:---------------|:-----------|:----|
+| **Primary audience** | Developers | All runtime users | Embedded / production deployers |
+| **Optimum-Ara Python package** | Source / build yourself | Not included | Often pre-installed |
+| **Ara SDK & proxy** | Not included | Included | Included (pre-configured) |
+| **Model `.dvm` binaries** | Config only | Not included | May be pre-installed |
+| **Typical host** | Dev machine | Dev or lab host | Target board (aarch64) |
+| **Configuration** | Manual setup | Set `DV_TGT_ROOT`, start proxy | Default paths, minimal setup |
 
 In practice, most developers clone or install from the **git repository** (or a wheel built from it), pair it with the **SDK** for runtime connectivity, and deploy to production using a **BSP** image on the target device.
 
@@ -249,18 +242,18 @@ Optimum-Ara/
 
 ### Key directories
 
-| Directory       | Purpose                                                                                                                                                                                                                                              |
-| :-------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `optimum/ara/`  | Library source—the entry point is `import optimum.ara`, which registers Ara classes with Transformers and loads the SDK `dvapi` module.                                                                                                              |
-| `docs/`         | Reference documentation for APIs, base classes, and model-specific classes.                                                                                                                                                                          |
-| `models/`       | Per-model directories containing `config.json` and `generation_config.json`. Each `config.json` includes an `ara` block with `dvm_path` and proxy interface settings. Actual `.dvm` binaries are placed locally or downloaded from Hugging Face Hub. |
-| `examples/`     | Minimal scripts demonstrating text generation, vision-language, and speech tasks.                                                                                                                                                                    |
-| `examples_gui/` | Interactive Gradio web UI for multimodal model testing.                                                                                                                                                                                              |
-| `testapp/`      | Structured testing tool with JSON configuration, batch prompts, and golden-output comparison.                                                                                                                                                        |
-| `tests/`        | Pytest suite; requires `DV_TGT_ROOT` for hardware-connected tests.                                                                                                                                                                                   |
-| `scripts/`      | Utility scripts for development and CI tasks.                                                                                                                                                                                                        |
-| `ci/`           | Jenkins pipeline definitions and CI configuration.                                                                                                                                                                                                   |
-| `val_cfg/`      | Validation configuration files used by CI test runs.                                                                                                                                                                                                 |
+| Directory | Purpose |
+|:----------|:--------|
+| `optimum/ara/` | Library source—the entry point is `import optimum.ara`, which registers Ara classes with Transformers and loads the SDK `dvapi` module. |
+| `docs/` | Reference documentation for APIs, base classes, and model-specific classes. |
+| `models/` | Per-model directories containing `config.json` and `generation_config.json`. Each `config.json` includes an `ara` block with `dvm_path` and proxy interface settings. Actual `.dvm` binaries are placed locally or downloaded from Hugging Face Hub. |
+| `examples/` | Minimal scripts demonstrating text generation, vision-language, and speech tasks. |
+| `examples_gui/` | Interactive Gradio web UI for multimodal model testing. |
+| `testapp/` | Structured testing tool with JSON configuration, batch prompts, and golden-output comparison. |
+| `tests/` | Pytest suite; requires `DV_TGT_ROOT` for hardware-connected tests. |
+| `scripts/` | Utility scripts for development and CI tasks. |
+| `ci/` | Jenkins pipeline definitions and CI configuration. |
+| `val_cfg/` | Validation configuration files used by CI test runs. |
 
 ---
 

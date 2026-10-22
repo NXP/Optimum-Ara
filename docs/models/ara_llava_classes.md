@@ -1,7 +1,6 @@
 # LLAVA Model Classes
 
 We have added two Qwen 2.5V Image specific classes.
-
 - [AraLlavaConfig](#arallavaconfig)
 - [AraLlavaForConditionalGeneration](#arallavaforconditionalgeneration)
 
@@ -18,22 +17,22 @@ We have added two Qwen 2.5V Image specific classes.
     "vision_add_input_path": "models/llava/assets/inputs/layer2-dv_Add_input-2_input_dv.dat",
     "vision_add_input_scale_path": "models/llava/assets/inputs/layer3-dv_Add_input_scale-3_input_dv.dat",
     "vision_concat_input_path": "models/llava/assets/inputs/layer4-dv_concat_input-4_input_dv.dat",
-    "vision_concat_input_scale_path": "models/llava/assets/inputs/layer5-dv_concat_input_scale-5_input_dv.dat"
+    "vision_concat_input_scale_path": "models/llava/assets/inputs/layer5-dv_concat_input_scale-5_input_dv.dat",
   },
-  "model_type": "ara_llava"
+  "model_type":"ara_llava"
 }
 ```
 
 ### Config Parameters:
 
-| Parameters                       | Description                                                                                    |
-| -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `vision_model_path`              | Path to Vision model dvm file we want to use.                                                  |
-| `vision_input_path`              | path to fixed input file layer0-onnx__Cast_0-0_input_dv.dat required for vision model          |
-| `vision_input_scale_path`        | path to fixed input file layer1-onnx__Cast_0_scale-1_input_dv.dat required for vision model    |
-| `vision_add_input_path`          | path to fixed input file layer2-dv_Add_input-2_input_dv.dat required for vision model          |
-| `vision_add_input_scale_path`    | path to fixed input file layer3-dv_Add_input_scale-3_input_dv.dat required for vision model    |
-| `vision_concat_input_path`       | path to fixed input file layer4-dv_concat_input-4_input_dv.dat required for vision model       |
+| Parameters | Description |
+| --------- | ----------- |
+| `vision_model_path` | Path to Vision model dvm file we want to use. |
+| `vision_input_path` | path to fixed input file layer0-onnx__Cast_0-0_input_dv.dat required for vision model |
+| `vision_input_scale_path` | path to fixed input file layer1-onnx__Cast_0_scale-1_input_dv.dat required for vision model |
+| `vision_add_input_path` | path to fixed input file layer2-dv_Add_input-2_input_dv.dat required for vision model |
+| `vision_add_input_scale_path` | path to fixed input file layer3-dv_Add_input_scale-3_input_dv.dat required for vision model |
+| `vision_concat_input_path` | path to fixed input file layer4-dv_concat_input-4_input_dv.dat required for vision model |
 | `vision_concat_input_scale_path` | path to fixed input file layer5-dv_concat_input_scale-5_input_dv.dat required for vision model |
 
 Checkout `AraPretrainedConfig` class for more info, refer [AraPretrainedConfig](../base_classes/ara_pretrained_config.md).

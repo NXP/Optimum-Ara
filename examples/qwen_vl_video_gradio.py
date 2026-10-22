@@ -25,7 +25,7 @@ generation_config = AraGenerationConfig.from_pretrained(
     MODEL_PATH + "/generation_config.json"
 )
 
-tokenizer = processor.tokenizer  # pyrefly: ignore [missing-attribute]
+tokenizer = processor.tokenizer # pyrefly: ignore [missing-attribute]
 
 
 def describe_video(video_path: str, prompt: str):
@@ -52,29 +52,29 @@ def describe_video(video_path: str, prompt: str):
             ],
         },
     ]
-
+    
     # Preparation for inference
     text = processor.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
-    image_inputs, video_inputs, _ = process_vision_info(
-        messages, return_video_kwargs=True
-    )
+    image_inputs, video_inputs, _ = process_vision_info(messages, return_video_kwargs=True)
     if image_inputs is None:
         image_inputs = []
     if video_inputs is None:
         video_inputs = []
-
+    
     processed_inputs = processor(
         text=[text],
         videos=cast(List[Any], video_inputs if video_inputs else []),
-        padding=True,  # pyrefly: ignore [unexpected-keyword]
-        return_tensors="pt",  # pyrefly: ignore [unexpected-keyword]
+        padding=True, # pyrefly: ignore [unexpected-keyword]
+        return_tensors="pt", # pyrefly: ignore [unexpected-keyword]
     )
 
     # Create TextIteratorStreamer to capture tokens as they're generated [web:26]
     streamer = TextIteratorStreamer(
-        tokenizer, skip_prompt=True, skip_special_tokens=True
+        tokenizer,
+        skip_prompt=True,
+        skip_special_tokens=True
     )
 
     # Prepare generation arguments

@@ -3,13 +3,11 @@
 Qwen2.5-VL is a multimodal large language model from Qwen series that can understand both text and images. It supports tasks like visual question answering, image captioning, and document understanding, handling complex visual inputs.
 
 We have added three Qwen 2.5VL specific classes.
-
 - [AraQwen2_5VLConfig](#araqwen2_5vlconfig)
 - [AraQwen2_5_VLForConditionalGeneration](#araqwen2_5_vlforconditionalgeneration)
 - [Qwen2_5_VLProcessor](#Qwen2_5_VLProcessor)
 
 We have added two Qwen 2.5V Image specific classes.
-
 - [AraQwen2_5ImageConfig](#araqwen2_5imageconfig)
 - [AraQwen2_5_ImageForConditionalGeneration](#araqwen2_5_imageforconditionalgeneration)
 
@@ -17,25 +15,24 @@ We have added two Qwen 2.5V Image specific classes.
 
 **AraQwen2_5VLConfig** extends **AraPretrainedConfig** with AraQwen2.5-vl model specific config params.
 Following config params are addition to params already present in **AraPretrainedConfig**
-
 ```json
 {
-  "ara": {
+"ara": {
     "vision_model_path": "./models/qwen2.5_vl/vision_encoder/model.dvm",
     "input_scale_path": "./models/qwen2.5_vl/vision_encoder/inputs/layer1-input_0_scale-1_input_dv.dat",
     "rope_table_path": "./models/qwen2.5_vl/vision_encoder/inputs/layer2-rope_table-2_input_dv.dat"
-  },
-  "model_type": "ara_qwen_vl"
+    },
+"model_type": "ara_qwen_vl",
 }
 ```
 
 ### Config Parameters:
 
-| Parameters          | Description                                                                            |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| `vision_model_path` | Path to Vision model dvm file we want to use.                                          |
-| `input_scale_path`  | path to fixed input file layer1-input_0_scale-1_input_dv.dat required for vision model |
-| `rope_table_path`   | path to fixed input file layer2-rope_table-2_input_dv.dat required for vision model    |
+| Parameters | Description |
+| --------- | ----------- |
+| `vision_model_path` | Path to Vision model dvm file we want to use. |
+| `input_scale_path` | path to fixed input file layer1-input_0_scale-1_input_dv.dat required for vision model |
+| `rope_table_path` | path to fixed input file layer2-rope_table-2_input_dv.dat required for vision model |
 
 Checkout `AraPretrainedConfig` class for more info, refer [AraPretrainedConfig](../base_classes/ara_pretrained_config.md).
 
@@ -46,6 +43,7 @@ from optimum.ara import AraQwen2_5VLConfig
 
 config = AraQwen2_5VLConfig.from_pretrained("./models/qwen2.5-vl/")
 ```
+
 
 ## AraQwen2_5_VLForConditionalGeneration
 
@@ -64,6 +62,7 @@ from optimum.ara import AraQwen2_5_VLForConditionalGeneration
 
 model = AraQwen2_5_VLForConditionalGeneration.from_pretrained("./models/qwen2.5-vl/")
 ```
+
 
 ## Qwen2_5_VLProcessor
 
@@ -121,7 +120,7 @@ processed_inputs = processor(
 )
 ```
 
-We can achieve same result with `AutoProcessor` as well.
+We can achieve same result with `AutoProcessor` as well. 
 
 ```python
 from PIL import Image
@@ -169,6 +168,7 @@ model_type = "ara_qwen_image"
 ```
 
 To know more about the AraPretrainedConfig class, refer [AraPretrainedConfig](../base_classes/ara_pretrained_config.md).
+
 
 ### AraQwen2_5_ImageForConditionalGeneration
 

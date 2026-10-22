@@ -12,9 +12,7 @@ from transformers import LogitsProcessor
 
 
 class SpeculativeDecodingLogitsProcessor(LogitsProcessor):
-    def __init__(
-        self, pad_token_id: int, seed: Optional[int] = None, do_sample: bool = False
-    ):
+    def __init__(self, pad_token_id: int, seed: Optional[int] = None, do_sample: bool = False):
         """
         Args:
             pad_token_id: Padding token ID from the model.
@@ -26,6 +24,9 @@ class SpeculativeDecodingLogitsProcessor(LogitsProcessor):
         self.seed = seed
         self.pad_token_id = pad_token_id
         self.do_sample = do_sample
+        self.gen = None
+        if self.seed is not None:
+            self.gen = torch.Generator().manual_seed(self.seed)
 
     def update_draft(
         self,
@@ -34,10 +35,7 @@ class SpeculativeDecodingLogitsProcessor(LogitsProcessor):
     ):
         """Updates the draft tokens and probabilities for the next step."""
         self.draft_token_ids = torch.cat(
-            [
-                draft_token_ids,
-                torch.tensor([self.pad_token_id], device=draft_token_ids.device),
-            ]
+            [draft_token_ids, torch.tensor([self.pad_token_id], device=draft_token_ids.device)]
         )
         self.draft_token_probabilities = torch.cat(
             [
@@ -68,19 +66,13 @@ class SpeculativeDecodingLogitsProcessor(LogitsProcessor):
         # 1. Calculate Target Probabilities (P_target)
         batch_size = scores.shape[0]
 
-        # 2. Rejection Sampling and Score Modification in a sequential loop
-        if self.seed is not None:
-            gen = torch.Generator(device=scores.device).manual_seed(self.seed)
-        else:
-            gen = None
-
         accepted_idx = 1
 
         for i in range(batch_size):
             probs = torch.nn.functional.softmax(scores[i], dim=-1)
             # Extract P_target and P_draft for current candidate
             draft_id = self.draft_token_ids[i]
-
+            
             if not self.do_sample:
                 target_token_id = torch.argmax(scores[i])
                 if target_token_id == draft_id:
@@ -106,8 +98,8 @@ class SpeculativeDecodingLogitsProcessor(LogitsProcessor):
 
             # Generate random number
             u = (
-                torch.rand(1, generator=gen, device=scores.device).item()
-                if gen
+                torch.rand(1, generator=self.gen, device=scores.device).item()
+                if self.gen
                 else torch.rand(1, device=scores.device).item()
             )
 
@@ -126,6 +118,9 @@ class SampleLogitsProcessor(LogitsProcessor):
     def __init__(self, seed: Optional[int] = None, do_sample: bool = False) -> None:
         self.seed = seed
         self.do_sample = do_sample
+        self.gen = None
+        if self.seed is not None:
+            self.gen = torch.Generator().manual_seed(self.seed)
 
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor
@@ -134,14 +129,13 @@ class SampleLogitsProcessor(LogitsProcessor):
             selected_tokens = torch.argmax(scores, dim=-1, keepdim=True)
             # logging.debug(f"greedy tokens: {selected_tokens}")
             return selected_tokens
-
+            
         # 1. Convert logits to probabilities
         probs = torch.nn.functional.softmax(scores, dim=-1)
 
         # 2. Sample one token per row
         if self.seed is not None:
-            gen = torch.Generator(device=scores.device).manual_seed(self.seed)
-            sampled_tokens = torch.multinomial(probs, num_samples=1, generator=gen)
+            sampled_tokens = torch.multinomial(probs, num_samples=1, generator=self.gen)
         else:
             sampled_tokens = torch.multinomial(probs, num_samples=1)
         # logging.debug(f"sampled tokens: {sampled_tokens}")
@@ -161,9 +155,7 @@ class LogitsDequantizer(LogitsProcessor):
         self.base = base
         self.exponent = exponent
 
-    def __call__(
-        self, logits: torch.LongTensor, scores: torch.FloatTensor
-    ) -> torch.Tensor:
+    def __call__(self, logits: torch.LongTensor, scores: torch.FloatTensor) -> torch.Tensor:
         """
         Dequantize logits by dividing by (base ** exponent).
 
@@ -177,7 +169,8 @@ class LogitsDequantizer(LogitsProcessor):
 
         scale_factor = torch.pow(
             torch.full((), self.base, dtype=torch.float32, device=logits.device),
-            self.exponent,
+                self.exponent
         )
-        scores_processed = scores / scale_factor
+        scores_processed =  scores / scale_factor
         return scores_processed
+

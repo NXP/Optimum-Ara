@@ -2,23 +2,23 @@
 
 Optimum-Ara is an extenstion of HuggingFace Transformers library with support for Ara Accelarator to enable High Performance AI at Edge.
 
-Below is the list of Enabled Classes:
+
+Below is the list of Enabled Classes: 
 
 Task Based Classes:
-
 - [AutoModelForCausalLM](#automodelforcausallm)
 - [AutoModelForImageTextToText](#automodelforimagetexttotext)
 - [AutoModelForVision2Seq](#automodelforvision2seq)
 - [AutoModelForSpeechSeq2Seq](#automodelforspeechseq2seq)
 
 Other Classes:
-
 - [AutoConfig](#autoconfig)
 - [AraGenerationConfig](#aragenerationconfig)
 
+
 ## AutoModelForCausalLM
 
-**AutoModelForCausalLM** class is imported from `transformers`.
+**AutoModelForCausalLM** class is imported from `transformers`. 
 when importing `optimum.ara` we will register following classes with **AutoModelForCausalLM**
 
 The **AutoModelForCausalLM** class will automatically select correct `AraModel` class based on `model_type` in `config.json` file.
@@ -30,7 +30,7 @@ For more details see [AutoModelForCausalLM](./models/ara_auto_class.md#automodel
 
 ## AutoModelForImageTextToText
 
-**AutoModelForImageTextToText** class is imported from `transformers`.
+**AutoModelForImageTextToText** class is imported from `transformers`. 
 when importing `optimum.ara` we will register following classes with **AutoModelForImageTextToText**
 
 The **AutoModelForImageTextToText** class will automatically select correct `AraModel` class based on `model_type` in `config.json` file.
@@ -43,7 +43,7 @@ For more details see [AutoModelForImageTextToText](./models/ara_auto_class.md#au
 
 ## AutoModelForVision2Seq
 
-**AutoModelForVision2Seq** class is imported from `transformers`.
+**AutoModelForVision2Seq** class is imported from `transformers`. 
 when importing `optimum.ara` we will register following classes with **AutoModelForVision2Seq**
 
 The **AutoModelForVision2Seq** class will automatically select correct `AraModel` class based on `model_type` in `config.json` file.
@@ -55,7 +55,7 @@ For more details see [AutoModelForVision2Seq](./models/ara_auto_class.md#automod
 
 ## AutoModelForSpeechSeq2Seq
 
-**AutoModelForSpeechSeq2Seq** class is imported from `transformers`.
+**AutoModelForSpeechSeq2Seq** class is imported from `transformers`. 
 when importing `optimum.ara` we will register following classes with **AutoModelForSpeechSeq2Seq**
 
 The **AutoModelForSpeechSeq2Seq** class will automatically select correct `AraModel` class based on `model_type` in `config.json` file.
@@ -66,7 +66,7 @@ For more details see [AutoModelForSpeechSeq2Seq](./models/ara_auto_class.md#auto
 
 ## AutoConfig
 
-**AutoConfig** class is imported from `transformers`.
+**AutoConfig** class is imported from `transformers`. 
 when importing `optimum.ara` we will register following classes with **AutoConfig**
 
 The **AutoConfig** class will automatically select correct `AraConfig` class based on `model_type` in `config.json` file.

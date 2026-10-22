@@ -7,78 +7,85 @@ allow-direct-references = true
 
 [project]
 name = "optimum-ara"
-version = "1.1.0"
+version = "1.1.1"
 description = "Optimum Library for Ara Integration"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
-    "librosa==0.11.0",
-    "numpy==2.4.3",
-    "pillow==12.1.1",
-    "pydantic==2.12.5",
-    "pyyaml==6.0.3",
-    "qwen-vl-utils==0.0.14",
-    "soundfile==0.13.1",
+    "numpy==2.2.1",
+    "pyyaml==6.0.2",
     "torch==2.9.0",
     "torchvision==0.24.0",
+    "pillow==12.0.0",
+    "qwen_vl_utils==0.0.14",
     "transformers==4.57.6",
+    "pydantic==2.12.0; python_version >= '3.14'",
+    "pydantic==2.11.5; python_version < '3.14'",
+    "av==15.0.0; python_version < '3.14'",
+    "av==16.0.0; python_version >= '3.14'",
+    "librosa",
+    "soundfile",
     "huggingface_hub",
     "opencv-python-headless==5.0.0.93"
 ]
-license = "Apache-2.0"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.1.0",
+    "pytest_html",
     "black>=23.0.0",
-    "pyrefly>=0.50.1",
+    "pyrefly>=1.0.0",
     "ruff>=0.11",
+    "pytest_html",
+    "pandas"
 ]
-
-[dependency-groups]
-dev = [
-    "ruff>=0.15.4",
+ci = [
+    "ollama",
+    "faiss-cpu",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["optimum"]
-sbom-files = ["SBOM.spdx.json"]
 
 [tool.hatch.build.targets.sdist]
-include = ["optimum", "SBOM.spdx.json"]
+include = ["optimum"]
 
 [tool.pyrefly]
+# When running "pyrefly check" with no path, only these are checked. Use "pyrefly check ." to check all.
 project-includes = ["optimum/**/*.py", "testapp/**/*.py", "tests/**/*.py", "ci/**/*.py", "examples/**/*.py", "scripts/**/*.py"]
+# Resolve ci local imports (e.g. repo_embeddings_generator) from ci/
 search-path = [".", "ci"]
-ignore-missing-imports = ["dvapi", "optimum.ara.api.dvapi", "handlers", "ollama", "faiss", "cv2", "gradio", "openpyxl", "openpyxl.*"]
+# Optional/runtime: dvapi (SDK), handlers (testapp), ollama/faiss (ci), cv2/gradio (examples), openpyxl (scripts)
+ignore-missing-imports = ["dvapi", "optimum.ara.api.dvapi", "handlers", "stop_utils", "ollama", "faiss", "cv2", "gradio", "gradio_client", "openpyxl", "openpyxl.*", "pytest_html", "pytest_html.*", "pandas"]
 
+# CI script uses ollama/requests patterns pyrefly reports as unsupported-operation
 [[tool.pyrefly.sub-config]]
 matches = "ci/**"
 [tool.pyrefly.sub-config.errors]
 unsupported-operation = false
 
+# Example scripts call apply_chat_template with Unpack[TypedDict] kwargs that pyrefly
+# cannot fully resolve, producing false-positive missing-argument/missing-attribute errors.
 [[tool.pyrefly.sub-config]]
-matches = "tests/test_llava.py"
+matches = "examples/**"
 [tool.pyrefly.sub-config.errors]
+missing-argument = false
 missing-attribute = false
-bad-assignment = false
-bad-argument-type = false
 
+# Stress summary script does relaxed dict assignments for log parsing/output.
 [[tool.pyrefly.sub-config]]
 matches = "scripts/gen_stress_test_summary.py"
 [tool.pyrefly.sub-config.errors]
 bad-assignment = false
 
 [tool.ruff]
-line-length = 88
-
-[tool.ruff.lint]
 select = ["E", "F", "I", "C4", "RUF"]
-ignore = ["E501"]
+ignore = []
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+testpaths = ["tests", "examples_gui/tests"]
 
 [tool.coverage.run]
 omit = [

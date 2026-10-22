@@ -1,7 +1,4 @@
-# Copyright (c) 2025, Kinara, Inc. All rights reserved.
-# Copyright 2025-2026 NXP
-# SPDX-License-Identifier: Apache-2.0
-
+# Copyright (c) 2025-2026, Kinara, Inc. All rights reserved.
 
 from ...modeling_seq2seq import AraModelForSpeechSeq2Seq
 from .configuration_whisper import AraWhisperConfig
@@ -17,7 +14,6 @@ from transformers.generation.streamers import BaseStreamer
 from transformers.generation.utils import GenerateEncoderDecoderOutput
 from transformers.models.whisper.generation_whisper import WhisperGenerationMixin
 from optimum.ara.generation.configuration_utils import AraGenerationConfig
-
 
 class AraModelForWhisper(AraModelForSpeechSeq2Seq, WhisperGenerationMixin):
     """ARA-specific Whisper model wrapper.
@@ -40,19 +36,12 @@ class AraModelForWhisper(AraModelForSpeechSeq2Seq, WhisperGenerationMixin):
             **kwargs: forwarded to parent class.
         """
         super().__init__(*args, **kwargs)
-        self.fixed_config = [
-            50258,
-            50259,
-            50359,
-            50363,
-        ]  # start, eng, transcribe, no timestamps
+        self.fixed_config = [50258, 50259, 50359, 50363]  # start, eng, transcribe, no timestamps
 
     def generate(  # pyrefly: ignore
         self,
         input_features: Optional[torch.Tensor] = None,
-        generation_config: Optional[
-            Union[GenerationConfig, AraGenerationConfig]
-        ] = None,
+        generation_config: Optional[Union[GenerationConfig, AraGenerationConfig]] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Any] = None,
@@ -104,16 +93,14 @@ class AraModelForWhisper(AraModelForSpeechSeq2Seq, WhisperGenerationMixin):
         """
 
         actual_input_features = input_features.clone().cpu().detach().numpy()
-        actual_input_features = np.round(actual_input_features * 74.4745).astype(
-            np.int8
-        )
-        actual_input_features_scales = np.ones(3000).astype(np.int8)  # dummy
+        actual_input_features = np.round(actual_input_features * 74.4745).astype(np.int8)
+        actual_input_features_scales = np.ones(3000).astype(np.int8) #dummy
 
         return (actual_input_features, actual_input_features_scales)
 
     def pad_tokens(self, input_array: np.ndarray) -> np.ndarray:
         # llm_params_obj = self.core.dv_internal.model._model.llm_params.contents
-        num_max_tokens = self.core.get_max_num_tokens()  # 1536
+        num_max_tokens = self.core.get_max_num_tokens() #1536
         pad_token = self.core.get_eos_token_id()
 
         # Ensure a 1-D copy of the original input token sequence is kept for MCP post-processing
@@ -125,7 +112,9 @@ class AraModelForWhisper(AraModelForSpeechSeq2Seq, WhisperGenerationMixin):
             pad_count = int(num_max_tokens - orig_tokens.size)
             pad_arr = np.full(pad_count, pad_token, dtype=np.int32)
             # rest_bytes = np.full(rest_of_bytes, 0, dtype=np.int8)
-            input_array = np.concatenate((orig_tokens, pad_arr), axis=0)
+            input_array = np.concatenate(
+                (orig_tokens, pad_arr), axis=0
+            )
 
         else:
             input_array = orig_tokens[: int(num_max_tokens)]
@@ -190,23 +179,19 @@ class AraModelForWhisper(AraModelForSpeechSeq2Seq, WhisperGenerationMixin):
         # print(f'hidden_sizes: {hidden_sizes}, context_size: {context_size}')
         if generation_config is None:
             raise ValueError("generation_config cannot be None")
-
+        
         if (
             not generation_config.ara.target_prompt_pre_mcp
         ):  # mcp = 0 means processing on host.
             input_array_block = input_array
-            actual_input_features, actual_input_features_scales = self.quantize(
-                input_features
-            )
+            actual_input_features, actual_input_features_scales = self.quantize(input_features)
 
             actual_input_features = actual_input_features.flatten().astype(np.int8)
             padd_features = np.zeros(
-                context_size * embedding_size - actual_input_features.size,
-                dtype=np.int8,
+                context_size * embedding_size - actual_input_features.size, dtype=np.int8
             )
             padd_scales = np.zeros(
-                context_size * embedding_size // 64 - actual_input_features_scales.size,
-                dtype=np.int8,
+                context_size * embedding_size//64 - actual_input_features_scales.size, dtype=np.int8
             )
             input_array = np.concatenate(
                 (
@@ -241,7 +226,7 @@ class AraModelForWhisper(AraModelForSpeechSeq2Seq, WhisperGenerationMixin):
         return infer_time  # float: seconds
 
     def _decode(
-        self,
+         self,
         input_array: np.ndarray,
         output_array: np.ndarray,
         num_valid_tokens: int,

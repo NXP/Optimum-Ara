@@ -47,20 +47,20 @@ class QEmbedding(nn.Module):
     A embedding layer that keeps weights as int8
     and performs lookups without dequantization.
     """
-
     def __init__(self, weight_int8: torch.Tensor):
         super().__init__()
         self.register_buffer("weight_int8", weight_int8.to(torch.int8))
 
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
         w = cast(torch.Tensor, self.weight_int8)
-        return w.index_select(0, input_ids.view(-1)).view(*input_ids.shape, -1)
-
+        return w.index_select(0, input_ids.view(-1)).view(
+            *input_ids.shape, -1
+        )
+    
     @property
     def weight(self):
         # mimic nn.Embedding.weight for compatibility
         return self.weight_int8
-
 
 def signal_handler(llm_app, signum, frame):
     if llm_app.llm_session:
@@ -70,36 +70,14 @@ def signal_handler(llm_app, signum, frame):
 
 
 class exit_handler(logging.StreamHandler):
+
     # TODO add continue on error and stop after N errors
     def emit(self, record):
         super().emit(record)
         if record.levelno in (logging.ERROR, logging.CRITICAL):
-            print("calling sys.exit")
+            logging.info("calling sys.exit")
             logging.shutdown()
             sys.exit(1)
-
-
-def setup_logger(log_level="info"):
-    log_level_map = {
-        "debug": logging.DEBUG,
-        "info": logging.INFO,
-        "warn": logging.WARNING,
-        "error": logging.ERROR,
-    }
-    if log_level.lower() in log_level_map.keys():
-        logging.disable(logging.NOTSET)
-        logging.basicConfig(
-            handlers=[exit_handler()],
-            format="[%(levelname).1s:%(asctime)s:%(msecs)03d] [%(name)s] %(message)s",
-            level=log_level_map[log_level.lower()],
-            datefmt="%y%m%d:%H%M%S",
-            force=True,
-        )
-        logger = logging.getLogger("LLMAPP")
-        return logger
-    else:
-        sys.exit("log level should be one of debug|info|warn|error")
-
 
 def get_stopping_criteria(
     generation_config: GenerationConfig,
@@ -108,12 +86,14 @@ def get_stopping_criteria(
     if generation_config.max_length is not None:
         criteria.append(
             MaxLengthCriteria(
-                max_length=2048,  # todo :: pick it from config
+                max_length=2048, # todo :: pick it from config
                 max_position_embeddings=2048,
             )
         )
     if generation_config.eos_token_id is not None:
-        criteria.append(EosTokenCriteria(eos_token_id=generation_config.eos_token_id))
+        criteria.append(
+            EosTokenCriteria(eos_token_id=generation_config.eos_token_id)
+        )
     if (
         generation_config.is_assistant
         and generation_config.assistant_confidence_threshold is not None
@@ -125,7 +105,6 @@ def get_stopping_criteria(
             )
         )
     return criteria
-
 
 def quantize(
     tensor: torch.Tensor, name: str = "", dump: bool = False
@@ -143,7 +122,7 @@ def quantize(
     # Handle zeros to avoid log2(0) and runtime warnings
     max_values_group = np.maximum(max_values_group, 1e-8)
 
-    with np.errstate(divide="ignore", invalid="ignore"):
+    with np.errstate(divide='ignore', invalid='ignore'):
         log_max_group = np.log2(max_values_group)
         scales = np.floor(log_max_group) + 1
         scales = 7 - scales

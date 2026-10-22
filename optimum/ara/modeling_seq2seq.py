@@ -10,12 +10,7 @@ from typing import Optional, Union, cast, List, Dict, Any, Tuple, Callable
 import torch
 import numpy as np
 
-from transformers import (
-    AutoModelForSpeechSeq2Seq,
-    Cache,
-    PretrainedConfig,
-    GenerationConfig,
-)
+from transformers import AutoModelForSpeechSeq2Seq, Cache, PretrainedConfig, GenerationConfig
 from transformers.generation.stopping_criteria import StoppingCriteriaList
 
 from transformers.models.auto.modeling_auto import (
@@ -31,7 +26,8 @@ import time
 
 from .configuration_utils import AraPretrainedConfig
 from .generation.configuration_utils import AraGenerationConfig, AraHostConfig
-from .modeling_base import AraModel
+from .modeling_base import AraModel, Status, Event
+
 
 
 class AraModelForConditionalGeneration(AraModel, GenerationMixin):
@@ -55,12 +51,12 @@ class AraModelForConditionalGeneration(AraModel, GenerationMixin):
         - Device temperature monitoring
         - Configuration management
         - Token processing and logits processing
-
+    
     AraModelForConditionalGeneration is a wrapper for conditional language modeling using Ara models.
     """
 
     stateful = False
-    generation_config: AraGenerationConfig  # type: ignore[override]
+    generation_config: AraGenerationConfig # type: ignore[override]
 
     def __init__(
         self,
@@ -127,11 +123,8 @@ class AraModelForConditionalGeneration(AraModel, GenerationMixin):
         if generation_config is None:
             raise ValueError("generation_config cannot be None")
 
-        input_ids_numpy = (
-            input_ids.numpy()
-            if isinstance(input_ids, torch.Tensor)
-            else np.array(input_ids)
-        )
+        input_ids_numpy = input_ids.numpy() if isinstance(input_ids, torch.Tensor) else np.array(input_ids)
+
 
         vocab_size = self.core.get_vocab_size()
         num_max_tokens = self.core.get_max_num_tokens()
@@ -229,6 +222,7 @@ class AraModelForConditionalGeneration(AraModel, GenerationMixin):
             "subsequent_time": self._token_generation_time,
         }
 
+
     @classmethod
     def from_config(cls, config: AraPretrainedConfig, **kwargs):
         """
@@ -242,14 +236,11 @@ class AraModelForConditionalGeneration(AraModel, GenerationMixin):
             AraModelForConditionalGeneration: Loaded model instance.
         """
         pretrained_model_name_or_path = config.ara.dvm_path
-
+        
         gen_cfg = AraGenerationConfig.from_model_config(config)
-
+        
         return cls.from_pretrained(
-            pretrained_model_name_or_path,
-            config=config,
-            generation_config=gen_cfg,
-            **kwargs,
+            pretrained_model_name_or_path, config=config, generation_config=gen_cfg, **kwargs
         )
 
     @classmethod
@@ -291,9 +282,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
     def generate(  # pyrefly: ignore[bad-override]
         self,
         inputs: Optional[torch.Tensor] = None,
-        generation_config: Optional[
-            Union[GenerationConfig, AraGenerationConfig]
-        ] = None,
+        generation_config: Optional[Union[GenerationConfig, AraGenerationConfig]] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Any] = None,
@@ -325,9 +314,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         Returns:
             Union[GenerateEncoderDecoderOutput, torch.LongTensor]: Generated token IDs.
         """
-        self.fixed_config = kwargs.pop(
-            "forced_decoder_ids", getattr(self, "fixed_config", None)
-        )
+        self.fixed_config = kwargs.pop('forced_decoder_ids', getattr(self, "fixed_config", None))
         prompt_ids = kwargs.pop("prompt_ids", None)
 
         if prompt_ids is None:
@@ -346,10 +333,10 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         self._num_input_tokens = prompt_ids
 
         if numpy_inputs is None or numpy_inputs.size == 0:
-            print("Error: input audio features are empty")
+            logging.error("Error: input audio features are empty")
             # Return an empty tensor with shape (1, 0) to match the expected return type
             return torch.LongTensor([[]])
-
+        
         # updates generation variables according to the generation config sent or kwargs
         generation_config, _ = self._prepare_generation_config(
             generation_config, **kwargs
@@ -358,7 +345,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
             "target_prompt_post_mcp": 1,
             "target_prompt_pre_mcp": 0,
             "target_token_post_mcp": 1,
-            "target_token_pre_mcp": 1,
+            "target_token_pre_mcp": 1
         }
         ara_cfg = generation_config.ara
         if (
@@ -378,7 +365,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         num_max_tokens = self.core.get_max_num_tokens()
 
         if prompt_ids.numel() >= num_max_tokens:
-            print(
+            logging.info(
                 f"input length is greater than or equal to max token length {num_max_tokens}, current input length: {prompt_ids.size}"
             )
             empty_tensor = torch.LongTensor([[]])
@@ -394,7 +381,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         eos_token_ls.append(eos_token_id)
 
         prepared_inputs = self.prepare_inputs_for_generation(
-            prompt_ids, generation_config=generation_config
+            prompt_ids, generation_config = generation_config
         )
 
         num_tokens = 0
@@ -418,11 +405,10 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
 
         self._ttft = infer_time
         self._token_generation_time = 0
+        self._stop_event.clear()
+        self._process_event(Event.START)
 
-        if (
-            generation_config is not None
-            and generation_config.ara.target_prompt_post_mcp
-        ):
+        if generation_config is not None and generation_config.ara.target_prompt_post_mcp:
             valid_tokens = output_array[:1].copy().astype("int32")
         else:
             valid_tokens = np.argmax(output_array, axis=-1, keepdims=True).astype(
@@ -435,7 +421,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
 
         if streamer:
             streamer.put(valid_tokens)
-
+        
         if generation_config is not None and generation_config.max_length > 0:
             user_max_length = generation_config.max_length
             if user_max_length > num_max_tokens:
@@ -443,9 +429,14 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         else:
             user_max_length = num_max_tokens
 
-        while len(generated_list) >= user_max_length or not any(
-            token in eos_token_ls for token in valid_tokens
+        while (
+            len(generated_list) >= user_max_length
+            or not any(token in eos_token_ls for token in valid_tokens)
         ):
+            if self._stop_event.is_set():
+                logging.info("Stop Called!")
+                break
+           
             if is_speculative:
                 input_array = np.pad(
                     valid_tokens,
@@ -463,7 +454,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
                 num_active_tokens=1,
                 generation_config=generation_config,
             )
-
+           
             self._token_generation_time += infer_time
 
             assert inf_req is not None
@@ -475,7 +466,7 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
             # Check if we got any valid tokens
             if num_valid_tokens == 0:
                 # No more tokens generated, break the loop
-                print("Error : No more valid token generated!")
+                logging.error("Error : No more valid token generated!")
                 break
 
             if generation_config.ara.target_token_post_mcp:
@@ -492,12 +483,14 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
                     break
                 generated_list.append(token)
 
+        
         if streamer is not None:
             streamer.end()
         self._generated_tokens_count = len(generated_list)
 
         generated_list_torch = torch.LongTensor([generated_list])
 
+        self._process_event(Event.STOP)
         if generation_config.return_dict_in_generate:
             return GenerateEncoderDecoderOutput(sequences=generated_list_torch)
         return generated_list_torch
@@ -530,13 +523,11 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         device_map = kwargs.pop("device_map", None)
         max_memory = kwargs.pop("max_memory", None)
         revision = kwargs.pop("revision", "main")
-
+        
         use_cache = kwargs.pop("use_cache", True)
         file_name = kwargs.pop("file_name", None)
 
-        config_result = cls._get_config(
-            pretrained_model_name_or_path, cast(Optional[AraPretrainedConfig], config)
-        )
+        config_result = cls._get_config(pretrained_model_name_or_path, cast(Optional[AraPretrainedConfig], config))
         if not isinstance(config_result, AraPretrainedConfig):
             raise TypeError(f"Expected AraPretrainedConfig, got {type(config_result)}")
         config_ara = config_result
@@ -544,14 +535,14 @@ class AraModelForSpeechSeq2Seq(AraModelForConditionalGeneration):
         dvm_file = cls._get_llm_dvm_path(
             pretrained_model_name_or_path, config_ara, file_name, revision
         )
-
+        
         # Load generation config use parent class method
         gen_config = cls._get_generation_config(
             pretrained_model_name_or_path,
             config_ara,
-            kwargs.pop("generation_config", None),
+            kwargs.pop("generation_config", None)
         )
-
+        
         init_cls = cls(
             model_path=dvm_file,
             config=config_ara,

@@ -1,5 +1,3 @@
-# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
-# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 # Copyright (c) 2025, Kinara, Inc. All rights reserved.
 # Copyright 2025-2026 NXP
 # SPDX-License-Identifier: Apache-2.0
@@ -39,9 +37,7 @@ class AraConfig(BaseModel):
 
 
 # type hinting: specifying the type of config class that inherits from AraPretrainedConfig
-SpecificAraPretrainedConfigType = TypeVar(
-    "SpecificAraPretrainedConfigType", bound="AraPretrainedConfig"
-)
+SpecificAraPretrainedConfigType = TypeVar("SpecificAraPretrainedConfigType", bound="AraPretrainedConfig")
 
 
 class AraPretrainedConfig(PretrainedConfig):
@@ -82,7 +78,7 @@ class AraPretrainedConfig(PretrainedConfig):
             interface_named_pipe=interface_named_pipe,
             interface_socket_file=interface_socket_file,
             interface_type=interface_type,
-            **kwargs,
+            **kwargs
         )
 
     @classmethod
@@ -98,11 +94,14 @@ class AraPretrainedConfig(PretrainedConfig):
     ) -> SpecificAraPretrainedConfigType:
         config_dict, _ = cls.get_config_dict(pretrained_model_name_or_path)
         ara_dict = config_dict.get("ara", {})
-        ara_dict = cls.update_ara_dict_params(ara_dict, **kwargs)
+        ara_dict = cls.update_ara_dict_params(
+            ara_dict,
+            **kwargs
+        )
         # ara_cfg = cls.make_ara_config(**ara_dict)
         config_dict["ara"] = ara_dict
 
-        return cls.from_dict(config_dict, **kwargs)  # pyrefly: ignore=bad-override
+        return cls.from_dict(config_dict, **kwargs) # pyrefly: ignore=bad-override
 
     @classmethod
     def update_ara_dict_params(cls, ara_dict, **kwargs):
@@ -180,6 +179,7 @@ class AraPretrainedConfig(PretrainedConfig):
         else:
             pass
 
+
         if "_attn_implementation_internal" in serializable_config_dict:
             del serializable_config_dict["_attn_implementation_internal"]
 
@@ -200,7 +200,7 @@ class AraPretrainedConfig(PretrainedConfig):
             raise AssertionError(
                 f"Provided path ({save_directory}) should be a directory, not a file"
             )
-
+            
         os.makedirs(save_directory, exist_ok=True)
 
         output_config_file = os.path.join(save_directory, DEFAULT_CONFIG_NAME)
@@ -224,7 +224,9 @@ class AraPretrainedConfig(PretrainedConfig):
 
     @classmethod
     def from_dict(
-        cls: type[SpecificAraPretrainedConfigType], config_dict, **kwargs
+        cls: type[SpecificAraPretrainedConfigType],
+        config_dict,
+        **kwargs
     ) -> SpecificAraPretrainedConfigType:
         """
         Load AraPretrainedConfig directly from the dictionary passed in the function.
@@ -239,3 +241,4 @@ class AraPretrainedConfig(PretrainedConfig):
             return config, kwargs  # pyrefly: ignore=bad-override
         else:
             return config
+

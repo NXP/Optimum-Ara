@@ -7,7 +7,10 @@ import typing
 from typing import Any, Optional, Union
 
 # dependencies for resizing the image
-import cv2
+try:
+    import cv2
+except ModuleNotFoundError:
+    cv2 = None
 import tempfile
 from io import BytesIO
 from PIL import Image
@@ -17,71 +20,68 @@ import os
 import torch
 
 import typing_extensions
-
 # from transformers import Qwen3_VLProcessor as _Qwen3_VLProcessor
 from transformers.processing_utils import AllKwargsForChatTemplate
 
-try:
-    from typing import Unpack
-except ImportError:
-    from typing_extensions import Unpack
+from typing_extensions import Unpack
 
 
 class ExtendedChatTemplateKwargs(AllKwargsForChatTemplate, total=False):
     add_generation_prompt: Optional[bool]
     tokenize: Optional[bool]
 
-
-class Qwen3VLProcessor:
+class Qwen3VLProcessor():
     """A thin subclass of the Transformers Qwen3_VLProcessor that enforces
     fixed image dimensions (384x384) and video FPS (2) via apply_chat_template.
     """
-
     @staticmethod
     def resize_image(input_path, target_width=384, target_height=384):
         """Reads an image, resizes it, and saves it to a temporary file."""
-
+        if cv2 is None:
+            raise ModuleNotFoundError("OpenCV (cv2) is required to resize Qwen3-VL images")
+        
         # Load the image
         img = cv2.imread(input_path)
         if img is None:
             raise ValueError(f"Could not open or find the image: {input_path}")
-
+            
         # Resize the image
         # Like your video script, this will squash/stretch to fit the exact dimensions
         resized_img = cv2.resize(img, (target_width, target_height))
-
+        
         # Create a temporary file to hold the resized image
         # We use .jpg here, but you can change the suffix to .png if needed
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
         output_path = temp_file.name
         temp_file.close()
 
         # Save the image to the temporary path
         cv2.imwrite(output_path, resized_img)
-
+        
         return output_path
-
     @staticmethod
     def resize_video(input_path, target_width=384, target_height=384):
         """Reads a video, resizes it, and saves it to a temporary file."""
-
+        if cv2 is None:
+            raise ModuleNotFoundError("OpenCV (cv2) is required to resize Qwen3-VL videos")
+        
         # Open the input video
         cap = cv2.VideoCapture(input_path)
         if not cap.isOpened():
             raise ValueError(f"Could not open video file: {input_path}")
-
+            
         # Get original video properties
         fps = cap.get(cv2.CAP_PROP_FPS)
-
+        
         # Create a temporary file to hold the resized video
         # delete=False ensures it stays on disk long enough for the model to read it
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
         output_path = temp_file.name
         temp_file.close()
 
         # Define the codec and create VideoWriter object
         # 'mp4v' is a standard, widely compatible codec for mp4 in OpenCV
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # pyrefly: ignore [missing-attribute]
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # pyrefly: ignore [missing-attribute]
         out = cv2.VideoWriter(output_path, fourcc, fps, (target_width, target_height))
 
         # Process frame by frame
@@ -89,7 +89,7 @@ class Qwen3VLProcessor:
             ret, frame = cap.read()
             if not ret:
                 break  # Reached the end of the video
-
+                
             # Resize the frame to exact dimensions (will squash/stretch if aspect ratio differs)
             resized_frame = cv2.resize(frame, (target_width, target_height))
             out.write(resized_frame)
@@ -97,7 +97,7 @@ class Qwen3VLProcessor:
         # Release everything
         cap.release()
         out.release()
-
+        
         return output_path
 
     @staticmethod
@@ -108,6 +108,7 @@ class Qwen3VLProcessor:
             return Image.open(source)
         else:
             raise ValueError("Invalid source: Not a valid URL or file path")
+
 
     # def quantize(inp_array):
     #     # arr_a = tensor.clone().cpu().detach().numpy()
@@ -151,9 +152,7 @@ class Qwen3VLProcessor:
         return arr_c, q_a.view(inp_tensor.shape)
 
     @staticmethod
-    def dequantize(
-        quantized: np.ndarray, scales: np.ndarray, shape: tuple
-    ) -> np.ndarray:
+    def dequantize(quantized: np.ndarray, scales: np.ndarray, shape: tuple) -> np.ndarray:
         # divide by 2**scale in order to  dequantize
         q_new = quantized.reshape(int(quantized.size / 64), 64)
         out = scales.reshape(-1, 1)

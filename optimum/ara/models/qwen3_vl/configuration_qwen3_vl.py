@@ -18,13 +18,11 @@ class AraQwen3_VL(AraConfig):
     vision_pos_table_path: str | None = None
     vision_pos_table_scale_path: str | None = None
 
-
 class AraQwen3VLConfig(AraPretrainedConfig):
     model_type = "ara_qwen3_vl"
     ara_class = AraQwen3_VL
     video_token_id: int = 151656
     image_token_id: int = 151655
-
 
 class AraQwen3ImageConfig(AraPretrainedConfig):
     model_type = "ara_qwen3_image"
@@ -32,10 +30,9 @@ class AraQwen3ImageConfig(AraPretrainedConfig):
     video_token_id: int = 151656
     image_token_id: int = 151655
 
-
 class AraQwen3MultiModalConfig(AraPretrainedConfig):
     model_type = "ara_qwen3_multimodal"
     ara_class = AraQwen3_VL
     video_token_id: int = 151656
     image_token_id: int = 151655
-    sys_pad_token_id: int = 220
+    sys_pad_token_id: int  = 220 

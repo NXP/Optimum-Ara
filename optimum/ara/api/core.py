@@ -1,7 +1,6 @@
-# Copyright (c) 2025, Kinara, Inc. All rights reserved.
-# Copyright 2025-2026 NXP
+# Copyright (c) 2026, Kinara, Inc. All rights reserved.
+# Copyright 2026 NXP
 # SPDX-License-Identifier: Apache-2.0
-
 # dvapi is loaded dynamically in optimum.ara.api.__init__ (see pyproject [tool.pyrefly] ignore-missing-imports)
 
 import logging
@@ -13,23 +12,8 @@ import numpy as np
 import torch
 import ctypes as c
 import dvapi
-from dvapi import (
-    DVEndpoint,
-    DVModel,
-    DVSession,
-    DVTensor,
-    DVInferOptions,
-    dv_status_code,
-    dv_stringify_status_code,
-)
-from dvapi import (
-    dv_model_type,
-    dv_model_llm_params,
-    dv_infer_type,
-    dv_get_client_lib_version,
-    dv_version,
-    dv_product_type,
-)
+from dvapi import DVEndpoint, DVModel, DVSession, DVTensor, DVInferOptions, dv_status_code, dv_stringify_status_code
+from dvapi import dv_model_type, dv_model_llm_params, dv_infer_type, dv_get_client_lib_version, dv_version, dv_product_type
 from ..configuration_utils import AraConfig, AraPretrainedConfig, InterfaceType
 from .exceptions import DvApiException
 from .core_configurations import InterfaceType, CoreConfig
@@ -38,7 +22,7 @@ from transformers.utils.generic import ModelOutput
 np.set_printoptions(threshold=5000)
 
 
-class Core:
+class Core():
     """
     Base class for all Ara models.
 
@@ -59,7 +43,7 @@ class Core:
             model_path (Union[Path, str]): Path to the model file.
             config (AraConfig): Model configuration.
         """
-
+    
         self.model_path = (
             Path(model_path) if isinstance(model_path, str) else model_path
         )
@@ -76,9 +60,7 @@ class Core:
         self.model_type: dv_model_type = dv_model_type.DV_MODEL_TYPE_ARA2_LLM_DYN_V2
         self.dv_version: dv_version = dv_get_client_lib_version()
 
-        logging.info(
-            f"ClientLib Version:{self.dv_version.major}.{self.dv_version.minor}.{self.dv_version.patch}.{self.dv_version.patch_minor}"
-        )
+        logging.info(f"ClientLib Version:{self.dv_version.major}.{self.dv_version.minor}.{self.dv_version.patch}.{self.dv_version.patch_minor}")
 
         self.create_session(config)
         self._check_client_lib_version_compatibility()
@@ -138,7 +120,8 @@ class Core:
                         if curr_versions[i].product_type == dv_product_type.PROXY:
                             pv = curr_versions[i].product_version
                             proxy_ver = (
-                                f"{pv.major}.{pv.minor}.{pv.patch}.{pv.patch_minor}"
+                                f"{pv.major}.{pv.minor}."
+                                f"{pv.patch}.{pv.patch_minor}"
                             )
                             break
                 finally:
@@ -156,15 +139,19 @@ class Core:
                 if product_versions[i].product_type == dv_product_type.LLM_MODEL
             ]
 
+
             if proxy_ver:
                 logging.info(
-                    f"Proxy version: {proxy_ver} | ClientLib version: {client_ver}"
+                    f"Proxy version: {proxy_ver} | "
+                    f"ClientLib version: {client_ver}"
                 )
             else:
                 logging.info(f"ClientLib version: {client_ver}")
 
             if supported_llm_versions:
-                logging.info(f"Supported LLM model versions: {supported_llm_versions}")
+                logging.info(
+                    f"Supported LLM model versions: {supported_llm_versions}"
+                )
 
             if hasattr(dv_product_type, "MCS_LLM_MODEL"):
                 supported_mcs_llm_versions = [
@@ -190,12 +177,10 @@ class Core:
 
             matches = False
             for sv in supported_client_lib_versions:
-                if (
-                    self.dv_version.major == sv.major
-                    and self.dv_version.minor == sv.minor
-                    and self.dv_version.patch == sv.patch
-                    and self.dv_version.patch_minor == sv.patch_minor
-                ):
+                if (self.dv_version.major == sv.major and
+                    self.dv_version.minor == sv.minor and
+                    self.dv_version.patch == sv.patch and
+                    self.dv_version.patch_minor == sv.patch_minor):
                     matches = True
                     break
 
@@ -227,10 +212,7 @@ class Core:
 
         logging.info(f"Interface type provided : {config.interface_type}")
 
-        if (
-            config.interface_type != InterfaceType.SOCKET
-            and config.interface_type != InterfaceType.IPV4
-        ):
+        if config.interface_type != InterfaceType.SOCKET and config.interface_type != InterfaceType.IPV4:
             raise ValueError(f"Unsupported interface type: {config.interface_type}")
 
         # ToDO: Add code for creating session with named_pipe here.
@@ -253,9 +235,7 @@ class Core:
                 tried_ipv4 = True
 
             if ret != dv_status_code.DV_SUCCESS:
-                logging.warning(
-                    f"could not establish session using {config.interface_type}"
-                )
+                logging.warning(f"could not establish session using {config.interface_type}")
                 if tried_socket == True and tried_ipv4 == False:
                     config.interface_type = InterfaceType.IPV4
                 elif tried_socket == False and tried_ipv4 == True:
@@ -265,13 +245,9 @@ class Core:
                     raise DvApiException(
                         f"Could not create session: {dv_stringify_status_code(ret)}"
                     )
-                logging.warning(
-                    f"try connection with interface_type {config.interface_type}"
-                )
+                logging.warning(f"try connection with interface_type {config.interface_type}")
             else:
-                logging.info(
-                    f"Session created with interface_type {config.interface_type}"
-                )
+                logging.info(f"Session created with interface_type {config.interface_type}")
                 break
         return ret
 
@@ -302,14 +278,14 @@ class Core:
         assert eplist is not None
         self.__endpoint_list = eplist[:]
         return self.__endpoint_list
-
-    def get_endpoint_dram_stats(self) -> Any:
+    
+    def get_endpoint_dram_stats(
+        self
+    ) -> Any:
         if self.__session is None:
             return None
-        if not hasattr(self.__session, "get_endpoint_dram_statistics"):
-            logging.debug(
-                "DVSession.get_endpoint_dram_statistics() is not present! Return None!"
-            )
+        if not hasattr(self.__session, 'get_endpoint_dram_statistics'):
+            logging.debug("DVSession.get_endpoint_dram_statistics() is not present! Return None!")
             return None
         status, dram_stats = self.__session.get_endpoint_dram_statistics()
         if status != dv_status_code.DV_SUCCESS:
@@ -331,10 +307,7 @@ class Core:
         Return endpoint decided for vision model.
         default: 0
         """
-        assert (
-            self.__endpoint_list is not None
-            and len(self.__endpoint_list) > self.vision_endpoint_id
-        )
+        assert self.__endpoint_list is not None and len(self.__endpoint_list) > self.vision_endpoint_id
         return self.__endpoint_list[self.vision_endpoint_id]
 
     def _set_llm_endpoint_id(self, endpoint_ids: List[int]) -> None:
@@ -343,24 +316,16 @@ class Core:
         default: 0
         """
         logging.debug(f"set llm_endpoint_ids to {endpoint_ids}")
-        assert self.__endpoint_list is not None and len(self.__endpoint_list) >= len(
-            endpoint_ids
-        )
+        assert self.__endpoint_list is not None and len(self.__endpoint_list) >= len(endpoint_ids)
         self.llm_endpoint_ids = endpoint_ids
-        endpoint_list = [self.__endpoint_list[i] for i in endpoint_ids]
+        endpoint_list = [self.__endpoint_list[i] for i in endpoint_ids ]
         # create endpoint group
-        if hasattr(DVSession, "endpoint_create_group") and callable(
-            getattr(DVSession, "endpoint_create_group")
-        ):
-            self.llm_endpoint_group = self.__session.endpoint_create_group(
-                endpoint_list
-            )
+        if hasattr(DVSession, "endpoint_create_group") and callable(getattr(DVSession, "endpoint_create_group")):
+            self.llm_endpoint_group = self.__session.endpoint_create_group(endpoint_list)
         else:
-            ep_list_bare = [e._endpoint for e in endpoint_list]
+            ep_list_bare = [e._endpoint for e in endpoint_list ]
 
-            ret, ep_grp = dvapi.dv_endpoint_create_group(
-                self.__session._session, ep_list_bare, len(ep_list_bare)
-            )
+            ret, ep_grp = dvapi.dv_endpoint_create_group(self.__session._session, ep_list_bare, len(ep_list_bare))
             assert ret is dv_status_code.DV_SUCCESS
             self.llm_endpoint_group = DVEndpoint(ep_grp[0])
 
@@ -370,21 +335,14 @@ class Core:
         default: 0
         """
         logging.debug(f"set vision_endpoint_id to {endpoint_id}")
-        assert (
-            self.__endpoint_list is not None
-            and len(self.__endpoint_list) > endpoint_id[0]
-        )
+        assert self.__endpoint_list is not None and len(self.__endpoint_list) > endpoint_id[0]
         self.vision_endpoint_id = endpoint_id[0]
 
-    def get_infer_type(self, infer_type: dv_infer_type) -> dv_infer_type:
+    def get_infer_type(self, infer_type:dv_infer_type) -> dv_infer_type:
         # handle infer type based on model type
-        if "DV_MODEL_TYPE_MCS_LLM" in dv_model_type.__members__:
+        if 'DV_MODEL_TYPE_MCS_LLM' in dv_model_type.__members__:
             if self.model_type == dv_model_type.DV_MODEL_TYPE_MCS_LLM:
-                if (
-                    infer_type
-                    == dv_infer_type.DV_INFER_TYPE_LLM_FOLLOWUP_PROMPT_PROCESSING
-                    or infer_type == dv_infer_type.DV_INFER_TYPE_LLM_PROMPT_PROCESSING
-                ):
+                if infer_type == dv_infer_type.DV_INFER_TYPE_LLM_FOLLOWUP_PROMPT_PROCESSING or infer_type == dv_infer_type.DV_INFER_TYPE_LLM_PROMPT_PROCESSING:
                     infer_type = dv_infer_type.DV_INFER_TYPE_MCS_LLM_PROMPT_PROCESSING
                 elif infer_type == dv_infer_type.DV_INFER_TYPE_LLM_TOKEN_GENERATION:
                     infer_type = dv_infer_type.DV_INFER_TYPE_MCS_LLM_TOKEN_GENERATION
@@ -403,7 +361,7 @@ class Core:
             logging.error("model is not loaded!")
             return dv_status_code.DV_ERROR, None, 0.0
 
-        tokens_to_skip = kwargs.pop("tokens_to_skip", 0)
+        tokens_to_skip = kwargs.pop('tokens_to_skip', 0)
         # endpoint = self._endpoint()
 
         input_tensors = [DVTensor(input_ids, params=None)]
@@ -428,11 +386,9 @@ class Core:
             infer_options=infer_options,
         )
         infer_time = time.time() - start_time
-
+    
         if status != dv_status_code.DV_SUCCESS:
-            raise DvApiException(
-                "Token generation failed", f"{dv_stringify_status_code(status)}"
-            )
+            raise DvApiException("Token generation failed", f"{dv_stringify_status_code(status)}")
 
         return status, inf_req, infer_time
 
@@ -453,21 +409,16 @@ class Core:
         vocab_size = self.get_vocab_size()
         logits = output_ids[:vocab_size]
         logits_reshaped = logits.reshape(1, 1, -1).astype(np.float32)
-        return (status, ModelOutput(logits=torch.from_numpy(logits_reshaped)))
+        return (
+            status,
+            ModelOutput(logits=torch.from_numpy(logits_reshaped))
+        )
 
     def model_get_parameters_from_file(self, model_path: str):
-        logging.debug(
-            f"model_get_parameters_from_file called, with model_path : {model_path}"
-        )
+        logging.debug(f"model_get_parameters_from_file called, with model_path : {model_path}")
         ret = dv_status_code.DV_FAILURE_UNKOWN
-        if (
-            self.dv_version.major <= 1
-            and self.dv_version.minor <= 3
-            and self.dv_version.patch <= 2
-        ):
-            logging.debug(
-                f"Current Client Lib version doesn't support parameter from file function!"
-            )
+        if self.dv_version.major <= 1 and self.dv_version.minor <= 3 and self.dv_version.patch <= 2 :
+            logging.debug(f"Current Client Lib version doesn't support parameter from file function!")
             return self.llm_params
         try:
             ret, model = DVModel.get_parameters_from_file(model_path)
@@ -476,21 +427,17 @@ class Core:
                 self.model_type = model.model_type
                 self.__model = model
             if ret == dv_status_code.DV_MODEL_UNSUPPORTED_VERSION:
-                logging.error(
-                    "Model DVM version is not supported by client_lib and proxy version."
-                )
+                logging.error("Model DVM version is not supported by client_lib and proxy version.")
                 raise DvApiException(
                     f"Model DVM Version not supported : {dv_stringify_status_code(ret)}"
                 )
         except Exception as e:
             print(f"Warning: Exception getting params from file: {e}")
         if ret != dv_status_code.DV_SUCCESS:
-            logging.warning(
-                f"failed to read model params from model_file: {model_path}"
-            )
+            logging.warning(f"failed to read model params from model_file: {model_path}")
         return self.llm_params
 
-    def _model_load_options(self, model_path: str) -> dvapi.DVModelLoadOptions:
+    def _model_load_options(self, model_path:str) -> dvapi.DVModelLoadOptions:
         """
         Returns the model load options for LLM models.
 
@@ -510,7 +457,9 @@ class Core:
         )
 
     def load_model(
-        self, model_path: Union[str, Path], endpoint_id: List[int] = [0]
+        self,
+        model_path: Union[str, Path],
+        endpoint_id: List[int] = [0]
     ) -> dv_status_code:
         """
         Loads a model from file using the provided session and endpoint.
@@ -533,7 +482,7 @@ class Core:
         assert model_path is not None, "model_path must not be None"
         if isinstance(model_path, Path):
             model_path = str(model_path)
-
+        
         self._set_llm_endpoint_id(endpoint_id)
 
         model_load_options = self._model_load_options(model_path)
@@ -564,15 +513,13 @@ class Core:
             raise RuntimeError("model is not loaded.")
 
         # dv_model_set_llm_cfg_params function failing for MCS Model
-        if "DV_MODEL_TYPE_MCS_LLM" in dv_model_type.__members__:
+        if 'DV_MODEL_TYPE_MCS_LLM' in dv_model_type.__members__:
             if self.model_type == dv_model_type.DV_MODEL_TYPE_MCS_LLM:
                 logging.debug("skip update_llm_params for DV_MODEL_TYPE_MCS_LLM")
                 return
 
         if generation_config.top_k > self.get_vocab_size():
-            logging.warning(
-                f"top_k should between [1, {self.get_vocab_size()}], max limit is vocab size of the model."
-            )
+            logging.warning(f"top_k should between [1, {self.get_vocab_size()}], max limit is vocab size of the model.")
             logging.warning(f"Updating top_k to {self.get_vocab_size()}.")
             generation_config.top_k = self.get_vocab_size()
 
@@ -607,41 +554,42 @@ class Core:
         ep_count: Any = None
         try:
             status, ep_stats, ep_count = dvapi.dv_endpoint_get_statistics(
-                self.__session._session, self.get_llm_endpoint()._endpoint
+                self.__session._session,
+                self.get_llm_endpoint()._endpoint
             )
-
-            if status != dv_status_code.DV_SUCCESS:
-                print(
-                    f"Warning: Failed to get device temperature: {dv_stringify_status_code(status)}"
-                )
+            
+            if status != dvapi.dv_status_code.DV_SUCCESS:
+                logging.warning(f"Warning: Failed to get device temperature: {dv_stringify_status_code(status)}")
                 return 0.0
-
+            
             if ep_count.value > 0:
                 temperature = ep_stats[0].ep_temp
                 return temperature
             else:
-                print("Warning: No endpoints found for temperature reading")
+                logging.warning("Warning: No endpoints found for temperature reading")
                 return 0.0
-
+                
         except Exception as e:
-            print(f"Warning: Error getting device temperature: {e}")
+            logging.warning(f"Warning: Error getting device temperature: {e}")
             return 0.0
         finally:
             if ep_stats is not None and ep_count is not None and ep_count.value > 0:
                 try:
                     dvapi.dv_endpoint_free_statistics(ep_stats, ep_count.value)
                 except Exception as e:
-                    print(f"Warning: Error getting device temperature: {e}")
+                    logging.warning(f"Warning: Error getting device temperature: {e}")
                     pass
 
     def get_dv_tensor(self, values: np.ndarray, params: Any) -> dvapi.DVTensor:
         """Return dv tensor from ndarray"""
-        if hasattr(values, "cpu"):
+        if hasattr(values, 'cpu'):
             values = values.cpu().detach().numpy()
         return dvapi.DVTensor(values, params=params)
 
     def load_vision_model(
-        self, model_path: str, endpoint_id: list[int] = [0]
+        self,
+        model_path: str,
+        endpoint_id: list[int] = [0]
     ) -> dv_status_code:
         """Load vision model from file."""
 
@@ -653,13 +601,14 @@ class Core:
         assert model_path is not None, "model_path must not be None"
         if isinstance(model_path, Path):
             model_path = str(model_path)
-
+        
         self._set_vision_endpoint_id(endpoint_id)
         ret, self.__vision_model = self.__session.load_model_from_file(
-            self.get_vision_endpoint(), model_path
+            self.get_vision_endpoint(),
+            model_path
         )
 
-        if ret != dv_status_code.DV_SUCCESS:
+        if (ret != dv_status_code.DV_SUCCESS):
             raise DvApiException(
                 f"Could not load_vision_model: {dv_stringify_status_code(ret)}"
             )
@@ -704,13 +653,13 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Check if the attribute exists
-        if not hasattr(self.llm_params, "max_num_tokens"):
-            raise AttributeError("Missing attribute: self.llm_params.max_num_tokens")
+        if not hasattr(self.llm_params, 'max_num_tokens'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.max_num_tokens"
+            )
 
         try:
             return self.llm_params.max_num_tokens
@@ -725,17 +674,19 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
-        if not hasattr(self.llm_params, "vocab_size"):
-            raise AttributeError("Missing attribute: self.llm_params.vocab_size")
+        if not hasattr(self.llm_params, 'vocab_size'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.vocab_size"
+            )
         try:
             return self.llm_params.vocab_size
         except Exception as e:
             # If something unexpected goes wrong while reading it, re-raise clearly
-            raise AttributeError(f"Failed to retrieve vocab_size: {e}")
+            raise AttributeError(
+                f"Failed to retrieve vocab_size: {e}"
+            )
 
     def get_pad_token_id(self) -> int:
         """
@@ -744,13 +695,13 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Explicit attribute check
-        if not hasattr(self.llm_params, "pad_token_id"):
-            raise AttributeError("Missing attribute: self.llm_params.pad_token_id")
+        if not hasattr(self.llm_params, 'pad_token_id'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.pad_token_id"
+            )
 
         try:
             return self.llm_params.pad_token_id
@@ -765,13 +716,13 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Explicitly check if the attribute exists
-        if not hasattr(self.llm_params, "eos_token_id"):
-            raise AttributeError("Missing attribute: self.llm_params.eos_token_id")
+        if not hasattr(self.llm_params, 'eos_token_id'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.eos_token_id"
+            )
 
         try:
             return self.llm_params.eos_token_id
@@ -786,13 +737,13 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Check for attribute existence
-        if not hasattr(self.llm_params, "is_speculative"):
-            raise AttributeError("Missing attribute: self.llm_params.is_speculative")
+        if not hasattr(self.llm_params, 'is_speculative'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.is_speculative"
+            )
 
         try:
             return self.llm_params.is_speculative
@@ -807,13 +758,13 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Check attribute existence
-        if not hasattr(self.llm_params, "is_host_specd"):
-            raise AttributeError("Missing attribute: self.llm_params.is_host_specd")
+        if not hasattr(self.llm_params, 'is_host_specd'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.is_host_specd"
+            )
 
         try:
             return self.llm_params.is_host_specd
@@ -828,38 +779,40 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Check attribute existence explicitly
-        if not hasattr(self.llm_params, "embedding_size"):
-            raise AttributeError("Missing attribute: self.llm_params.embedding_size")
+        if not hasattr(self.llm_params, 'embedding_size'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.embedding_size"
+            )
 
         try:
             return self.llm_params.embedding_size
         except Exception as e:
             # If something unexpected goes wrong while reading it, re-raise clearly
-            raise AttributeError(f"Failed to retrieve embedding_size: {e}")
+            raise AttributeError(
+                f"Failed to retrieve embedding_size: {e}"
+            )
 
     def get_input_precision(self) -> int:
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Ensure the target attribute exists
         if not hasattr(self.llm_params, "input_precision"):
-            raise AttributeError("Missing attribute: self.llm_params.input_precision")
+            raise AttributeError(
+                "Missing attribute: self.llm_params.input_precision"
+            )
         d = {}
-        d["input_precision"] = getattr(self.llm_params, "input_precision", 1)
+        d['input_precision'] = getattr(self.llm_params, 'input_precision', 1)
         try:
-            input_precision = d.get("input_precision", 8)
+            input_precision = d.get('input_precision', 8)
         except AttributeError as e:
             raise TypeError("Expected 'd' to be a dictionary") from e
         return input_precision
-
+    
     def get_embedding_lookup_addr(self) -> int:
         """
         Returns the embedding_lookup_addr from the model.
@@ -867,12 +820,10 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Explicit attribute existence check
-        if not hasattr(self.llm_params, "embedding_lookup_addr"):
+        if not hasattr(self.llm_params, 'embedding_lookup_addr'):
             raise AttributeError(
                 "Missing attribute: self.llm_params.embedding_lookup_addr"
             )
@@ -889,12 +840,10 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Explicit attribute existence check
-        if not hasattr(self.llm_params, "embedding_lookup_scale_addr"):
+        if not hasattr(self.llm_params, 'embedding_lookup_scale_addr'):
             raise AttributeError(
                 "Missing attribute: self.llm_params.embedding_lookup_scale_addr"
             )
@@ -911,35 +860,33 @@ class Core:
         """
 
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         # Explicitly check if the attribute exists
-        if not hasattr(self.llm_params, "bos_token_id"):
-            raise AttributeError("Missing attribute: self.llm_params.bos_token_id")
+        if not hasattr(self.llm_params, 'bos_token_id'):
+            raise AttributeError(
+                "Missing attribute: self.llm_params.bos_token_id"
+            )
 
         try:
             return self.llm_params.bos_token_id
         except Exception as e:
             # Unexpected error while reading the value
             raise AttributeError(f"Failed to retrieve bos_token_id: {e}")
-
+    
     def get_num_shards(self) -> int:
         logging.debug("get_num_shards called!")
         if self.__model is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
             return 1
 
-        if not hasattr(self.__model._model, "is_mcs"):
+        if not hasattr(self.__model._model, 'is_mcs'):
             logging.debug("model does not have is_mcs param.")
             return 1
         if self.__model._model.is_mcs == 0:
             logging.debug("model is not a MCS (Multi Chip Shard) model.")
             return 1
-        if not hasattr(self.__model._model, "mcs_params"):
+        if not hasattr(self.__model._model, 'mcs_params'):
             logging.debug("model does not have mcs_params param.")
             return 1
         logging.debug(f"num_shards: {self.__model._model.mcs_params.num_shards}")
@@ -948,12 +895,10 @@ class Core:
     def is_mcs_model(self) -> bool:
         logging.debug("is_mcs_model called!")
         if self.__model is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
             return False
 
-        if not hasattr(self.__model._model, "is_mcs"):
+        if not hasattr(self.__model._model, 'is_mcs'):
             logging.debug("model does not have is_mcs param.")
             return False
         if self.__model._model.is_mcs == 0:
@@ -963,9 +908,7 @@ class Core:
 
     def print_llm_params(self) -> None:
         if self.llm_params is None:
-            logging.warning(
-                "Missing attribute: load_model() or model_get_parameters_from_file() first!"
-            )
+            logging.warning("Missing attribute: load_model() or model_get_parameters_from_file() first!")
 
         print(f"llm_params: {self.llm_params}")
 
@@ -980,3 +923,4 @@ class Core:
             "is_speculative": self.is_speculative(),
             "is_host_specd": self.is_host_specd(),
         }
+
