@@ -5,21 +5,19 @@ This directory contains the configuration for LLaVA (Large Language and Vision A
 ## Model Components
 
 - **LLM Model**: Llama 3.1 8B model (.dvm file)
-- **Vision Model**: CLIP ViT-L/14 model (.dvm file)
+- **Vision Model**: CLIP ViT-L/14 model (.dvm file) 
 - **Multimodal Projector**: Connects vision features to LLM embedding space
 
 ## Required Files
 
 ### Model Files
-
 - `llama3_1_model.dvm` - Llama 3.1 8B LLM model
 - `vit_model.dvm` - CLIP ViT-L/14 vision model
 
 ### Assets Directory
-
 - `embedding_table.pt` - Token embedding table (128320 x 4096)
 - `proxy_ip_data1.bin` - Quantization constants
-- `proxy_ip_data2.bin` - Quantization constants
+- `proxy_ip_data2.bin` - Quantization constants  
 - `proxy_ip_data3.bin` - Quantization constants
 - `proxy_ip_data4.bin` - Quantization constants
 - `proxy_ip_data5.bin` - Quantization constants
@@ -27,7 +25,6 @@ This directory contains the configuration for LLaVA (Large Language and Vision A
 ## Configuration
 
 The `config.json` file contains:
-
 - `ara.dvm_path`: Path to the model directory (relative path)
 - `vision_model_path`: Path to the vision model file (relative to model directory)
 
@@ -65,4 +62,4 @@ tokenizer = AutoTokenizer.from_pretrained("path/to/tokenizer")
 image = Image.open("image.jpg")
 inputs = tokenizer("Describe this image", return_tensors="pt")
 outputs = model.generate(image=image, **inputs)
-```
+``` 

@@ -18,12 +18,8 @@ from optimum.ara.generation.configuration_utils import AraGenerationConfig
 VIDEO_PATH = "/users/kapil/video_qwen/fire_bbq_cropped.mp4"
 IMAGE_PATH = "/users/kapil/images_qwen/NXP_Logo_RGB_Colour.png"
 PROMPT = "Describe this video briefly"
-PROCESSOR_ID = (
-    "Qwen/Qwen2.5-VL-3B-Instruct"  # "Qwen/Qwen2.5-VL-3B-Instruct" for 3b model Kapil
-)
-MODEL_PATH = Path(
-    "./models/qwen2.5-vl-multimodal-3b"
-)  # ./models/qwen2.5-vl-multimodal-7b for b model
+PROCESSOR_ID = "Qwen/Qwen2.5-VL-3B-Instruct"  # "Qwen/Qwen2.5-VL-3B-Instruct" for 3b model Kapil
+MODEL_PATH = Path("./models/qwen2.5-vl-multimodal-3b")  # ./models/qwen2.5-vl-multimodal-7b for b model
 
 config = AraQwen2_5MultiModalConfig.from_pretrained(MODEL_PATH / "config.json")
 generation_config = AraGenerationConfig.from_pretrained(
@@ -38,9 +34,7 @@ model = AraQwen2_5_MultiModalForConditionalGeneration.from_pretrained(
 
 
 def video_inference(video_path, processor):
-    print(
-        f"Doing video inference over video = {video_path}, prompt = Describe this video."
-    )
+    print(f"Doing video inference over video = {video_path}, prompt = Describe this video.")
 
     messages = [
         {
@@ -73,7 +67,9 @@ def video_inference(video_path, processor):
     )
 
     streamer = TextStreamer(
-        processor.tokenizer, skip_prompt=True, skip_special_tokens=True
+        processor.tokenizer,
+        skip_prompt=True,
+        skip_special_tokens=True
     )
 
     # Generate
@@ -86,12 +82,10 @@ def video_inference(video_path, processor):
         stream=True,
         streamer=streamer,
     )
-
+    
 
 def image_inference(image_path, processor):
-    print(
-        f"Doing image inference over image = {image_path}, prompt = Describe this image."
-    )
+    print(f"Doing image inference over image = {image_path}, prompt = Describe this image.")
     image = Image.open(image_path)
 
     messages = [
@@ -113,7 +107,7 @@ def image_inference(image_path, processor):
     text = processor.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
-    image_inputs, video_inputs = process_vision_info(messages)  # pyrefly: ignore
+    image_inputs, video_inputs= process_vision_info(messages)  # pyrefly: ignore
 
     processed_inputs = processor(
         text=[text],
@@ -124,7 +118,9 @@ def image_inference(image_path, processor):
     )
 
     streamer = TextStreamer(
-        processor.tokenizer, skip_prompt=True, skip_special_tokens=True
+        processor.tokenizer,
+        skip_prompt=True,
+        skip_special_tokens=True
     )
 
     # Generate
@@ -139,7 +135,7 @@ def image_inference(image_path, processor):
     )
 
 
-def text_inference(prompt, processor, sys_prompt=None):
+def text_inference(prompt, processor, sys_prompt = None):
     print(f"Doing text inference  with prompt = {prompt} and sys_prompt = {sys_prompt}")
     messages = []
     if sys_prompt:
@@ -160,7 +156,7 @@ def text_inference(prompt, processor, sys_prompt=None):
     text = processor.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
-    image_inputs, video_inputs = process_vision_info(messages)  # pyrefly: ignore
+    image_inputs, video_inputs= process_vision_info(messages)  # pyrefly: ignore
 
     processed_inputs = processor(
         text=[text],
@@ -171,7 +167,9 @@ def text_inference(prompt, processor, sys_prompt=None):
     )
 
     streamer = TextStreamer(
-        processor.tokenizer, skip_prompt=True, skip_special_tokens=True
+        processor.tokenizer,
+        skip_prompt=True,
+        skip_special_tokens=True
     )
 
     # Generate
@@ -192,3 +190,4 @@ image_inference(IMAGE_PATH, processor)
 text_inference("Who are you?", processor, sys_prompt="You are Chat Assistant by NXP")
 
 del model
+

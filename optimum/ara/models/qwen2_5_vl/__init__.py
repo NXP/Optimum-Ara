@@ -18,25 +18,15 @@ from .processing_qwen2_5_vl import Qwen2_5_VLProcessor, QwenVLProcessor
 
 # Register with transformers library for seamless HF integration
 AutoConfig.register("ara_qwen_vl", AraQwen2_5VLConfig)
-AutoModelForImageTextToText.register(
-    AraQwen2_5VLConfig, AraQwen2_5_VLForConditionalGeneration
-)
-AutoModelForVision2Seq.register(
-    AraQwen2_5VLConfig, AraQwen2_5_VLForConditionalGeneration
-)
+AutoModelForImageTextToText.register(AraQwen2_5VLConfig, AraQwen2_5_VLForConditionalGeneration)
+AutoModelForVision2Seq.register(AraQwen2_5VLConfig, AraQwen2_5_VLForConditionalGeneration)
 
 AutoConfig.register("ara_qwen_image", AraQwen2_5ImageConfig)
-AutoModelForImageTextToText.register(
-    AraQwen2_5ImageConfig, AraQwen2_5_ImageForConditionalGeneration
-)
+AutoModelForImageTextToText.register(AraQwen2_5ImageConfig, AraQwen2_5_ImageForConditionalGeneration)
 
 AutoConfig.register("ara_qwen_multimodal", AraQwen2_5MultiModalConfig)
-AutoModelForImageTextToText.register(
-    AraQwen2_5MultiModalConfig, AraQwen2_5_MultiModalForConditionalGeneration
-)
-AutoModelForVision2Seq.register(
-    AraQwen2_5MultiModalConfig, AraQwen2_5_MultiModalForConditionalGeneration
-)
+AutoModelForImageTextToText.register(AraQwen2_5MultiModalConfig, AraQwen2_5_MultiModalForConditionalGeneration)
+AutoModelForVision2Seq.register(AraQwen2_5MultiModalConfig, AraQwen2_5_MultiModalForConditionalGeneration)
 
 __all__ = [
     "AraQwen2_5VLConfig",
@@ -44,7 +34,5 @@ __all__ = [
     "AraQwen2_5_ImageForConditionalGeneration",
     "AraQwen2_5_VLForConditionalGeneration",
     "AraQwen2_5_MultiModalForConditionalGeneration",
-    "AraQwen2_5MultiModalConfig",
-    "Qwen2_5_VLProcessor",
-    "QwenVLProcessor",
+    "AraQwen2_5MultiModalConfig", "Qwen2_5_VLProcessor", "QwenVLProcessor",
 ]

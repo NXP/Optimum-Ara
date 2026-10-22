@@ -6,10 +6,9 @@ import torch
 import numpy as np
 
 
-class CustomLogitsProcessor:
-    def __call__(
-        self, input_ids: torch.LongTensor, scores: np.ndarray, **kwargs
-    ) -> tuple[np.ndarray, np.ndarray]:
+class CustomLogitsProcessor():
+
+    def __call__(self, input_ids: torch.LongTensor, scores: np.ndarray, **kwargs) -> tuple[np.ndarray, np.ndarray]:
         """
         first return  : selected token ids from scores (logits vectors)
         second return : draft/candidate token ids

@@ -20,7 +20,7 @@ config = AutoConfig.from_pretrained("models/whisper")
 forced_decoder_ids = [
     tid
     # pyrefly: ignore [missing-attribute]
-    for _, tid in processor.get_decoder_prompt_ids(
+    for _, tid in  processor.get_decoder_prompt_ids(
         language="english", task="transcribe", no_timestamps=True
     )
 ]
@@ -47,7 +47,7 @@ generated_ids = model.generate(
     streamer=streamer,
     prompt_ids=prompt_ids,
     forced_decoder_ids=forced_decoder_ids,
-    generation_config=generation_config,
+    generation_config=generation_config
 )
 
 del model

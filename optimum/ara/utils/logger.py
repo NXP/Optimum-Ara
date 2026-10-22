@@ -12,14 +12,13 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # ANSI color codes for levels
 COLORS = {
-    "DEBUG": "\033[36m",  # Cyan
-    "INFO": "\033[32m",  # Green
+    "DEBUG": "\033[36m",    # Cyan
+    "INFO": "\033[32m",     # Green
     "WARNING": "\033[33m",  # Yellow
-    "ERROR": "\033[31m",  # Red
-    "CRITICAL": "\033[41m",  # Red background
+    "ERROR": "\033[31m",    # Red
+    "CRITICAL": "\033[41m", # Red background
     "RESET": "\033[0m",
 }
-
 
 class ColorFormatter(logging.Formatter):
     def format(self, record):
@@ -33,10 +32,9 @@ class ColorFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, self.datefmt)
         return formatter.format(record)
 
-
 def setup_logger():
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(ColorFormatter(LOG_FORMAT))
+  handler = logging.StreamHandler(sys.stdout)
+  handler.setFormatter(ColorFormatter(LOG_FORMAT))
 
-    logging.root.setLevel(getattr(logging, LOG_LEVEL.upper(), logging.INFO))
-    logging.root.handlers = [handler]
+  logging.root.setLevel(getattr(logging, LOG_LEVEL.upper(), logging.INFO))
+  logging.root.handlers = [handler]

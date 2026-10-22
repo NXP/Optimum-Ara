@@ -23,9 +23,8 @@ from transformers.generation.utils import GenerateDecoderOnlyOutput
 from .configuration_utils import AraConfig, AraPretrainedConfig, InterfaceType
 from .generation.configuration_utils import AraGenerationConfig
 from .generation import CustomLogitsProcessor
-from .modeling_decoder import AraModelForCausalLM
+from .modeling_decoder import AraModelForCausalLM, Status, Event
 from .utils.constants import DEFAULT_GENERATION_CONFIG_NAME
-from .utils.utils import dequantize, quantize
 
 # Configure logging
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -81,6 +80,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         self._prefill_time: float = 0.0
         self._vision_inference_time: float = 0.0
         self._generated_tokens_count: int = 0
+        self._vision_encoder_cache: Optional[Tuple[int, torch.Tensor, Any]] = None
 
     def load_components(self):
         # Load components
@@ -113,7 +113,8 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
         # Load config using parent class method
         config_result = cls._get_config(
-            pretrained_model_name_or_path, cast(Optional[AraPretrainedConfig], config)
+            pretrained_model_name_or_path,
+            cast(Optional[AraPretrainedConfig], config)
         )
         if not isinstance(config_result, AraPretrainedConfig):
             raise TypeError(f"Expected AraPretrainedConfig, got {type(config_result)}")
@@ -123,12 +124,15 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         gen_config = cls._get_generation_config(
             pretrained_model_name_or_path,
             config_ara,
-            kwargs.pop("generation_config", None),
+            kwargs.pop("generation_config", None)
         )
 
         # Get LLM DVM path using parent class method
         llm_path = cls._get_llm_dvm_path(
-            pretrained_model_name_or_path, config_ara, file_name, revision
+            pretrained_model_name_or_path,
+            config_ara,
+            file_name,
+            revision
         )
 
         if config_ara.ara is None:
@@ -142,7 +146,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             config=config_ara,
             use_cache=use_cache,
             generation_config=gen_config,
-            **kwargs,
+            **kwargs
         )
 
         # VLM-specific: Load both LLM and vision models
@@ -153,24 +157,21 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         return init_cls
 
     @classmethod
-    def _get_vision_dvm_path(cls, config: "AraPretrainedConfig"):
+    def _get_vision_dvm_path(
+        cls,
+        config: "AraPretrainedConfig"
+    ):
         if config is None:
             raise ValueError("config cannot be None")
         if config.ara is None:
             raise ValueError("config.ara cannot be None")
         vision_path = ""
-        if hasattr(config.ara, "vision_model_path"):
+        if hasattr(config.ara, 'vision_model_path'):
             vision_model_path = config.ara.vision_model_path
-            if (
-                vision_model_path is not None
-                and os.path.exists(str(vision_model_path))
-                and str(vision_model_path).endswith(".dvm")
-            ):
+            if vision_model_path is not None and os.path.exists(str(vision_model_path)) and str(vision_model_path).endswith(".dvm"):
                 vision_path = Path(vision_model_path)
             else:
-                logging.warning(
-                    f"incorrect vision model dvm file path provided in config {vision_model_path}"
-                )
+                logging.warning(f"incorrect vision model dvm file path provided in config {vision_model_path}")
                 logging.warning("vision_model_path should is a path to *.dvm file")
         else:
             logging.warning("'vision_model_path' is not present in config.ara")
@@ -183,9 +184,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
     def load_vision_model(self, model_path: str, device_map, max_memory):
         """Load vision model from file."""
-        endpoint_id = self._handle_device_map(
-            model_path, device_map, max_memory, vision_model=True
-        )
+        endpoint_id = self._handle_device_map(model_path, device_map, max_memory, vision_model=True)
         ret = self.core.load_vision_model(model_path, endpoint_id)
 
         return ret
@@ -205,7 +204,9 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         # This will be implemented by subclasses
         raise NotImplementedError
 
-    def process(self, image, conversation: list, new_image: bool = True, **kwargs):
+    def process(
+        self, image, conversation: list, new_image: bool = True, **kwargs
+    ):
         """
         Process image and conversation for inference.
 
@@ -266,11 +267,11 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         return text_embeds
 
     def merge_multi_modal_features(
-        self,
-        input_ids: torch.Tensor,
-        feature_embeds: Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
+        self, 
+        input_ids: torch.Tensor, 
+        feature_embeds: Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]], 
         text_embeds: Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
-        vision_token_id,  # TODO: type?
+        vision_token_id #TODO: type?
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """Merge multi-modal features."""
         n_video_tokens = (input_ids == vision_token_id).sum().item()
@@ -294,19 +295,14 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
                 # Keep only the first n_video_features, replace the rest with pad
                 if len(vision_positions) == 2:  # [batch, seq]
                     excess_positions = vision_positions[1][n_video_features:]
-                    input_ids[
-                        vision_positions[0][n_video_features:], excess_positions
-                    ] = pad_token_id
+                    input_ids[vision_positions[0][n_video_features:], excess_positions] = pad_token_id
                 else:  # [seq]
                     excess_positions = vision_positions[0][n_video_features:]
                     input_ids[excess_positions] = pad_token_id
 
                 # Also need to re-embed the modified input_ids
                 if self.embedding is not None and self.embedding_scales is not None:
-                    text_embeds = (
-                        self.embedding(input_ids),
-                        self.embedding_scales(input_ids),
-                    )
+                    text_embeds = (self.embedding(input_ids), self.embedding_scales(input_ids))
                 else:
                     raise ValueError("embedding or embedding_scales is None")
 
@@ -315,9 +311,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
             if n_video_tokens != n_video_features:
                 unique_tokens = torch.unique(input_ids)
-                possible_image_tokens = [
-                    t for t in unique_tokens.tolist() if t > vision_token_id
-                ]
+                possible_image_tokens = [t for t in unique_tokens.tolist() if t > vision_token_id]
                 error_msg = (
                     f"Video features and video tokens do not match:\n"
                     f"  Expected token ID: {vision_token_id}\n"
@@ -342,17 +336,37 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
         return inputs_embeds, inputs_embeds_scales
 
-    def get_embeddings(
-        self, ids: torch.LongTensor
-    ) -> torch.Tensor:  # not needed, @naveen to confirm
+    def get_embeddings(self, ids: torch.LongTensor) -> torch.Tensor: # not needed, @naveen to confirm
         """Get embeddings for token IDs."""
         # This will be implemented by subclasses
         raise NotImplementedError
 
-    def vision_inference(self, vision_inputs: torch.Tensor, num_frames: int) -> Any:
+    def vision_inference(
+        self, vision_inputs: torch.Tensor, num_frames: int
+    ) -> Any:
         """Perform vision inference."""
         # This will be implemented by subclasses
         raise NotImplementedError
+
+    def _cached_vision_inference(
+        self, vision_inputs: torch.Tensor, num_frames: int
+    ) -> Any:
+        vision_inputs_for_cache = vision_inputs.detach().cpu().contiguous()
+        cached = self._vision_encoder_cache
+        if (
+            cached is not None
+            and cached[0] == num_frames
+            and cached[1].shape == vision_inputs_for_cache.shape
+            and cached[1].dtype == vision_inputs_for_cache.dtype
+            and torch.equal(cached[1], vision_inputs_for_cache)
+        ):
+            logging.info("Vision Encoder Cache: HIT")
+            return cached[2]
+
+        logging.info("Vision Encoder Cache: MISS")
+        result = self.vision_inference(vision_inputs, num_frames)
+        self._vision_encoder_cache = (num_frames, vision_inputs_for_cache.clone(), result)
+        return result
 
     # TODO: Not needed, naveen to confirm
     def forward(  # pyrefly: ignore[bad-override]
@@ -377,11 +391,9 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             valid_tokens=valid_tokens,
             infer_type=infer_type,
             tokens_to_skip=tokens_to_skip,
-            **kwargs,
+            **kwargs
         )
-        status, inf_req = self.core.process_inference_output(
-            status, output_ids, inf_req
-        )
+        status, inf_req = self.core.process_inference_output(status, output_ids, inf_req)
         return status, inf_req, infer_time
 
     # TODO: Not needed, naveen to confirm. Modeling decoders function must be used.
@@ -410,15 +422,22 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
         # VLM-specific tokens_to_skip calculation
         # This should be overridden by specific VLM implementations
-        tokens_to_skip = kwargs.pop("tokens_to_skip", 0)
+        tokens_to_skip = kwargs.pop('tokens_to_skip', 0)
+
+        infer_type = (
+            self.core.infer_type.DV_INFER_TYPE_LLM_FOLLOWUP_PROMPT_PROCESSING
+            if tokens_to_skip != 0
+            else self.core.infer_type.DV_INFER_TYPE_LLM_PROMPT_PROCESSING
+        )
+
 
         status, inf_req, infer_time = self.forward(
             input_array,
             output_array,
-            infer_type=self.core.infer_type.DV_INFER_TYPE_LLM_PROMPT_PROCESSING,
+            infer_type=infer_type,
             active_tokens=num_active_tokens,
             valid_tokens=num_valid_tokens,
-            tokens_to_skip=tokens_to_skip,
+            tokens_to_skip=tokens_to_skip
         )
 
         return infer_time
@@ -435,13 +454,10 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             at multiples of 128. We do this by padding the system prompt with space.
         Returns (padded_input_ids, sys_prompt_len) tuple.
     """
-
-    def _pad_until_vision_starts_at_multiple_of(
-        self, input_ids: Tensor, vision_token_id, multiple=128
-    ):
+    def _pad_until_vision_starts_at_multiple_of(self, input_ids: Tensor, vision_token_id, multiple=128):
         if not vision_token_id:
-            return input_ids, 0
-
+            return input_ids
+        
         # system prompt needs to be padded with 220 (space_token_id) instead of pad_token_id.
         # sys_pad_token_id is 220 for qwen2.5 and qwem3 models
         pad_token_id = self.config.sys_pad_token_id
@@ -454,9 +470,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
         # Find im_end_token index
         system_end_tkn_index = (
-            (input_ids == self.core.get_eos_token_id())
-            .nonzero(as_tuple=True)[1][0]
-            .item()
+            (input_ids == self.core.get_eos_token_id()).nonzero(as_tuple=True)[1][0].item()
         )
         sys_prompt_len = system_end_tkn_index + pad
 
@@ -464,12 +478,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         padded = torch.cat(
             [
                 input_ids[:, :system_end_tkn_index],
-                torch.full(
-                    (1, pad),
-                    pad_token_id,
-                    dtype=input_ids.dtype,
-                    device=input_ids.device,
-                ),  # pyrefly: ignore [no-matching-overload]
+                torch.full((1, pad), pad_token_id, dtype=input_ids.dtype, device=input_ids.device), # pyrefly: ignore [no-matching-overload]
                 input_ids[:, system_end_tkn_index:],
             ],
             dim=-1,
@@ -480,9 +489,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
     def generate(
         self,
         inputs: Optional[torch.Tensor] = None,
-        generation_config: Optional[
-            Union[GenerationConfig, AraGenerationConfig]
-        ] = None,
+        generation_config: Optional[Union[GenerationConfig, AraGenerationConfig]] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Any] = None,
@@ -493,7 +500,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
         use_model_defaults: Optional[bool] = None,
         custom_generate: Optional[Union[str, Callable]] = None,
-        **kwargs,
+        **kwargs
     ) -> Union[GenerateDecoderOnlyOutput, torch.LongTensor, Any]:
         """
         Generate text based on video and/or text input using custom generation loop.
@@ -519,7 +526,9 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         self._token_generation_time = 0
         self._generated_tokens_count = 0
         self._vision_inference_time = 0
-        self._sys_prompt_len = 0
+        self._stop_event.clear()
+        self._process_event(Event.START)
+
         input_ids = kwargs.pop("input_ids", None)
         pixel_values_videos = kwargs.pop("pixel_values_videos", None)
         pixel_values = kwargs.pop("pixel_values", None)
@@ -527,21 +536,15 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         input_ids = inputs if inputs is not None else cast(torch.Tensor, input_ids)
         if input_ids is None:
             raise ValueError("Either inputs or input_ids must be provided")
-
+        
         if streamer is not None:
             # put input token ids, as expected from HF
             # if skip prompt is true, first put will be ignored.
             streamer.put(input_ids.detach().cpu().numpy().astype(np.int64))
 
         # Video models must not receive image-only inputs; raise before any other path
-        if (
-            not self.is_image_model
-            and not self.is_multimodal_model
-            and pixel_values is not None
-        ):
-            logging.warning(
-                "This is a video model and won't work on image inputs, ignoring image inputs"
-            )
+        if not self.is_image_model and not self.is_multimodal_model and pixel_values is not None:
+            logging.warning("This is a video model and won't work on image inputs, ignoring image inputs")
 
         # Determine num_frames based on actual inputs used
         if self.is_image_model:
@@ -580,6 +583,38 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             else:
                 num_frames = 0
 
+        tokens_to_skip = 0
+        new_image = True
+        if vision_inputs is not None:
+            vision_inputs_for_cache = vision_inputs.detach().cpu().contiguous()
+            cached = self._vision_encoder_cache
+            reuse_vision = (
+                cached is not None
+                and cached[0] == num_frames
+                and torch.equal(cached[1], vision_inputs_for_cache)
+            )
+            if reuse_vision:
+                logging.info("Vision Encoder Cache: HIT")
+                logging.debug("Reusing old vision embeddings")
+                new_image = False
+                device = input_ids.device if isinstance(input_ids, torch.Tensor) else None
+                vision_token_tensor = torch.tensor(vision_token_id, device=device)
+                
+                # Base skip: system prompt + vision tokens (end of vision token range)
+                prefix_to_skip = 0
+                if isinstance(input_ids, torch.Tensor) and vision_token_id is not None:
+                    vis_indices = (input_ids == vision_token_tensor).nonzero(as_tuple=True)
+                    if len(vis_indices[1]) > 0:
+                        last_vision_idx = vis_indices[1][-1].item() + 1
+                        prefix_to_skip = last_vision_idx
+
+                # Align to 128-token hardware chunk boundaries
+                seq_len = input_ids.shape[1] if isinstance(input_ids, torch.Tensor) else len(input_ids)
+                aligned_skip = 128 * (prefix_to_skip // 128)
+                tokens_to_skip = min(aligned_skip, max(0, seq_len - 1))
+                logging.debug(f"Num of tokens to skip: {tokens_to_skip} (prefix_to_skip: {prefix_to_skip})")
+
+
         mcp_dict = {
             "target_prompt_pre_mcp": 0,
             "target_prompt_post_mcp": 0,
@@ -594,7 +629,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         ara_cfg = generation_config.ara
         if (
             ara_cfg.target_prompt_post_mcp != mcp_dict["target_prompt_post_mcp"]
-            or ara_cfg.target_prompt_pre_mcp != mcp_dict["target_token_pre_mcp"]
+            or ara_cfg.target_prompt_pre_mcp != mcp_dict["target_token_pre_mcp"] 
             or ara_cfg.target_token_post_mcp != mcp_dict["target_token_post_mcp"]
             or ara_cfg.target_token_pre_mcp != mcp_dict["target_token_pre_mcp"]
         ):
@@ -622,7 +657,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         # Retrieve the device correctly
         device = None
         if hasattr(self, "embedding") and hasattr(self.embedding, "weight"):
-            device = str(self.embedding.weight.device)
+             device = str(self.embedding.weight.device)
 
         self.logits_processor = self._get_logits_processor(
             generation_config=generation_config,
@@ -646,24 +681,27 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             raise ValueError("embedding or embedding_scales is None")
 
         input_embeds = (self.embedding(input_ids), self.embedding_scales(input_ids))
-
         if vision_inputs is not None:
             assert num_frames is not None
-            start_vit = time.perf_counter()
-            video_embeds = self.vision_inference(vision_inputs, num_frames)
-            self._vision_inference_time = time.perf_counter() - start_vit
-            input_embeds = self.merge_multi_modal_features(
-                input_ids, video_embeds, input_embeds, vision_token_id
-            )
+            if new_image:
+                start_vit = time.perf_counter()
+                logging.debug("Running vision inference")
+                video_embeds = self._cached_vision_inference(vision_inputs, num_frames)
+                self._vision_inference_time = time.perf_counter() - start_vit
+            else:
+                self._vision_inference_time = 0.0
+                assert self._vision_encoder_cache is not None
+                video_embeds = self._vision_encoder_cache[2]
+            input_embeds = self.merge_multi_modal_features(input_ids, video_embeds, input_embeds, vision_token_id)
+        else:
+            self._vision_inference_time = 0.0
 
         prepared_inputs = self.prepare_inputs_for_generation(
             input_ids=cast(torch.LongTensor, input_ids),
             inputs_embeds=input_embeds,
-            generation_config=generation_config,
+            generation_config=generation_config
         )
-        self.input_token_ids = (
-            input_ids.detach().cpu().numpy().flatten().astype(np.int64).copy()
-        )
+        self.input_token_ids = input_ids.detach().cpu().numpy().flatten().astype(np.int64).copy()
 
         # Initialize generation variables
         input_array = prepared_inputs["input_array"]
@@ -677,25 +715,26 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
         logging.debug(f"input_array size: {len(input_array)}")
         logging.debug(f"output_array size: {len(output_array)}")
-
+        
         # Measure Time to First Token (TTFT)
         # First token generation
         self._prefill_time = self._generate_first_token(
             input_array,
             output_array,
-            active_tokens,
-            num_valid_tokens,
-            generation_config,
+            num_valid_tokens=num_valid_tokens,
+            num_active_tokens=active_tokens,
+            generation_config=generation_config,
+            tokens_to_skip=tokens_to_skip,
         )
         self._ttft = self._prefill_time + self._vision_inference_time
         self._subsequent_start = time.time()
         # Extract next tokens
         next_tokens = self._extract_next_tokens(
-            output_array,
-            self.input_token_ids,
-            generation_config,
+            output_array, 
+            self.input_token_ids, 
+            generation_config, 
             num_valid_tokens=1,
-            is_first_token=True,
+            is_first_token=True
         )
 
         # Apply unfinished sequences logic
@@ -707,12 +746,10 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         # Update input token IDs for next iteration
         next_tokens = next_tokens.astype(np.int64)
 
-        self.input_token_ids = np.concatenate(
-            [
-                self.input_token_ids.astype(np.int64),
-                next_tokens.flatten().astype(np.int64),
-            ]
-        )
+        self.input_token_ids = np.concatenate([
+            self.input_token_ids.astype(np.int64),
+            next_tokens.flatten().astype(np.int64)
+        ])
         generated_list.append(next_tokens[0])
 
         if streamer is not None:
@@ -726,8 +763,12 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             user_max_length = num_max_tokens
 
         while True:
-            if len(generated_list) + numpy_inputs.size >= user_max_length or any(
-                token in eos_token_ls for token in next_tokens
+            if self._stop_event.is_set():
+                logging.info("Stop Called!")
+                break
+            if (
+                len(generated_list) + numpy_inputs.size >= user_max_length
+                or any(token in eos_token_ls for token in next_tokens)
             ):
                 break
             next_tokens_tensor = torch.from_numpy(next_tokens[:, None]).long()
@@ -753,16 +794,14 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
 
             # Extract next tokens using _extract_next_tokens
             next_tokens = self._extract_next_tokens(
-                output_array,
-                self.input_token_ids,
-                generation_config,
+                output_array, 
+                self.input_token_ids, 
+                generation_config, 
                 num_valid_tokens=1,
-                is_first_token=False,
+                is_first_token=False
             )
 
-            self.input_token_ids = np.concatenate(
-                [self.input_token_ids, next_tokens.flatten()]
-            )
+            self.input_token_ids = np.concatenate([self.input_token_ids, next_tokens.flatten()])
             generated_list.append(next_tokens[0])
 
             if streamer is not None:
@@ -772,24 +811,24 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             streamer.end()
         generated_list = torch.LongTensor(generated_list)
         # Plus one for EOS token
-        self._generated_tokens_count = len(generated_list) + 1
-
+        self._generated_tokens_count = len(generated_list)+1
+        
         output_torch = torch.cat(
             [torch.from_numpy(numpy_inputs), generated_list.unsqueeze(0)], dim=1
         )
         output_torch = cast(torch.LongTensor, output_torch)
+
+        self._process_event(Event.STOP)
         if generation_config.return_dict_in_generate:
             return GenerateDecoderOnlyOutput(sequences=output_torch)
         return output_torch
-
+    
     def prepare_inputs_for_generation(
         self,
         input_ids: Union[torch.LongTensor, np.ndarray],
         past_key_values: Optional[Any] = None,
         attention_mask: Optional[torch.LongTensor] = None,
-        inputs_embeds: Optional[
-            Union[torch.Tensor, np.ndarray, Tuple[torch.Tensor, torch.Tensor]]
-        ] = None,
+        inputs_embeds: Optional[Union[torch.Tensor, np.ndarray, Tuple[torch.Tensor, torch.Tensor]]] = None,
         cache_position: Optional[torch.LongTensor] = None,
         generation_config: Optional[AraGenerationConfig] = None,
         **kwargs,
@@ -802,14 +841,14 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             # We are likely called from AraModelForCausalLM.generate with token IDs
             # Delegate to AraModelForCausalLM's implementation
             return super(AraModelForVisualCausalLM, self).prepare_inputs_for_generation(
-                input_ids=input_ids,
-                past_key_values=past_key_values,
-                attention_mask=attention_mask,
-                inputs_embeds=inputs_embeds,
-                cache_position=cache_position,
-                generation_config=generation_config,
-                **kwargs,
-            )
+                 input_ids=input_ids,
+                 past_key_values=past_key_values,
+                 attention_mask=attention_mask,
+                 inputs_embeds=inputs_embeds,
+                 cache_position=cache_position,
+                 generation_config=generation_config,
+                 **kwargs
+             )
 
         """
         Prepare input/output arrays in the same format used by the generic VLM path
@@ -824,11 +863,7 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
         embeds, embeds_scales = inputs_embeds
 
         # Ensure input_ids is a tensor for size checks
-        input_ids_tensor = (
-            input_ids
-            if isinstance(input_ids, torch.Tensor)
-            else torch.from_numpy(np.array(input_ids))
-        )
+        input_ids_tensor = input_ids if isinstance(input_ids, torch.Tensor) else torch.from_numpy(np.array(input_ids))
         valid_tokens = embeds.shape[1]
         padding_amt = num_max_tokens - valid_tokens
         embeds = torch.nn.functional.pad(
@@ -838,9 +873,9 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             f"Expected ({num_max_tokens * embedding_dim}), got {embeds.shape}"
         )
 
-        scales_padding_amt = ((num_max_tokens * embedding_dim) // 64) - (
-            embeds_scales.shape[1] * embeds_scales.shape[2]
-        )
+        scales_padding_amt = (
+            (num_max_tokens * embedding_dim) // 64
+        ) - (embeds_scales.shape[1] * embeds_scales.shape[2]) 
 
         embeds_scales = torch.nn.functional.pad(
             embeds_scales.flatten(), (0, scales_padding_amt), value=0
@@ -865,13 +900,11 @@ class AraModelForVisualCausalLM(AraModelForCausalLM):
             .view(np.int8)
         )
 
-        input_array = np.concatenate(
-            (
-                token_ids,
-                embeds.cpu().numpy().flatten(),
-                embeds_scales.cpu().numpy().flatten(),
-            )
-        )
+        input_array = np.concatenate((
+            token_ids, 
+            embeds.cpu().numpy().flatten(), 
+            embeds_scales.cpu().numpy().flatten()
+        ))
         output_array = np.zeros(
             (self.core.get_vocab_size() * 4), dtype=np.int32
         )  # 608256 elements

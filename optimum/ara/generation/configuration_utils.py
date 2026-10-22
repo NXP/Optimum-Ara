@@ -24,12 +24,10 @@ class AraHostConfig(BaseModel):
         target_prompt_pre_mcp=1,
     )
     """
-
     target_token_post_mcp: int = Field(1, ge=0, le=1)
     target_token_pre_mcp: int = Field(1, ge=0, le=1)
     target_prompt_post_mcp: int = Field(1, ge=0, le=1)
     target_prompt_pre_mcp: int = Field(1, ge=0, le=1)
-
 
 class AraGenerationConfig(GenerationConfig):
     """
@@ -65,9 +63,7 @@ class AraGenerationConfig(GenerationConfig):
             self.top_p = float(self.top_p)
 
         if self.do_sample == False:
-            logging.warning(
-                f"do_sample is False, setting top_k=1, top_p=0.0 and temperature=0.0"
-            )
+            logging.warning(f"do_sample is False, setting top_k=1, top_p=0.0 and temperature=0.0")
             self.top_k = 1
             self.top_p = 0.0
             self.temperature = 0.0
@@ -78,9 +74,7 @@ class AraGenerationConfig(GenerationConfig):
                 self.top_k = 1
 
             if self.top_p < 0.0 or self.top_p > 1.0:
-                logging.warning(
-                    "top_p out of range, supported range [0.0, 1.0]. 0.0 means disabled!"
-                )
+                logging.warning("top_p out of range, supported range [0.0, 1.0]. 0.0 means disabled!")
                 logging.warning(f"Updating top_p to 0.0.")
                 self.top_p = 0.0
 
@@ -148,10 +142,7 @@ class AraGenerationConfig(GenerationConfig):
                 pretrained_model_name
                 if os.path.isfile(pretrained_model_name)
                 else os.path.join(
-                    pretrained_model_name,
-                    config_file_name
-                    if config_file_name
-                    else DEFAULT_GENERATION_CONFIG_NAME,
+                    pretrained_model_name, config_file_name if config_file_name else DEFAULT_GENERATION_CONFIG_NAME
                 )
             )
             return cls.from_json_file(json_file, **kwargs)
@@ -164,7 +155,7 @@ class AraGenerationConfig(GenerationConfig):
                 local_files_only=local_files_only,
                 token=token,
                 revision=revision,
-                **kwargs,
+                **kwargs
             )
             ara_cfg = cls.make_ara_config()
             return cls(ara_cfg=ara_cfg, **temp.to_dict())
@@ -218,7 +209,7 @@ class AraGenerationConfig(GenerationConfig):
             AraGenerationConfig: The created configuration.
         """
         gen_cfg = GenerationConfig.from_model_config(model_config)
-
+        
         ara_kwargs = {
             k: kwargs[k] for k in list(AraHostConfig.model_fields.keys()) if k in kwargs
         }

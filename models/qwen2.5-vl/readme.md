@@ -45,7 +45,6 @@ print(response)
 ## Configuration
 
 The model uses the same two-model architecture as LLaVA:
-
 1. **Vision Model**: ViT DVM for image feature extraction
 2. **Language Model**: Qwen 2.5 DVM for text generation
 
@@ -55,13 +54,12 @@ Both models are loaded from the paths specified in the configuration.
 
 - Ara hardware with DVM support
 - Vision and language model DVM files
-- Required bin files for vision encoding constants
+- Required bin files for vision encoding constants 
 
 ## Input Requirements
 
 - Video inputs allowed be upto 26 seconds long.
 
 ## Important Note
-
 - Old QwenVL2.5-7B model of fixed video length will not work with the latest version.
 - New version supports dynamic video length.

@@ -18,8 +18,7 @@ VIDEO_PATH = "./examples/assets/personFalling_8.mp4"
 PROMPT = "Describe this video briefly"
 MODEL_PATH = "./models/qwen2.5-vl-3B_variable_length"
 
-# Initialize components
-model = AraQwen2_5_VLForConditionalGeneration.from_pretrained(MODEL_PATH)
+# Initialize processor
 processor = Qwen2_5_VLProcessor.from_pretrained("Qwen/Qwen2.5-VL-3B-Instruct")
 
 messages = [
@@ -55,6 +54,9 @@ processed_inputs = processor(
     return_tensors="pt",  # pyrefly: ignore [unexpected-keyword]
 )
 
+#Initialize model
+model = AraQwen2_5_VLForConditionalGeneration.from_pretrained(MODEL_PATH)
+
 streamer = TextStreamer(processor.tokenizer, stream=sys.stdout)  # type: ignore
 # Generate
 result = model.generate(
@@ -63,7 +65,7 @@ result = model.generate(
     temperature=1.0,
     do_sample=False,
     stream=False,
-    streamer=streamer,
+    streamer=streamer
 )
 
 if isinstance(result, GenerateDecoderOnlyOutput):

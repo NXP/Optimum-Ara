@@ -25,17 +25,14 @@ class AraQwen2_5VLConfig(AraPretrainedConfig):
     video_token_id: int = 151656
     image_token_id: int = 151655
 
-
 class AraQwen2_5ImageConfig(AraPretrainedConfig):
     model_type = "ara_qwen_image"
     ara_class = AraQwen2_5_VL
     video_token_id: int = 151656
     image_token_id: int = 151655
-
-
 class AraQwen2_5MultiModalConfig(AraPretrainedConfig):
     model_type = "ara_qwen_multimodal"
     ara_class = AraQwen2_5_VL
     video_token_id: int = 151656
     image_token_id: int = 151655
-    sys_pad_token_id: int = 220
+    sys_pad_token_id: int  = 220 

@@ -4,7 +4,7 @@
 
 [![license](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE.txt)
 [![python](https://img.shields.io/badge/Python-%3E=3.12-green)](https://www.python.org/downloads/release/python-31013/)
-![optimum-ara-version](https://img.shields.io/badge/Optimum--Ara-v1.1.0-orange)
+![optimum-ara-version](https://img.shields.io/badge/Optimum--Ara-v1.1.1-orange)
 ![sdk-version](https://img.shields.io/badge/Ara%20SDK-r3.0-yellow)
 
 ---
@@ -57,18 +57,17 @@ The following models are integrated into the `optimum-ara` library:
 
 ### Qwen2.5 Family
 
-| Model                       | Type | Task                                     | model_type          |
-| :-------------------------- | :--- | :--------------------------------------- | :------------------ |
-| Qwen2-7B-Instruct           | LLM  | Text Generation                          | ara_qwen            |
-| Qwen2.5-3B-Instruct         | LLM  | Text Generation                          | ara_qwen            |
-| Qwen2.5-7B-Instruct         | LLM  | Text Generation                          | ara_qwen            |
-| Qwen2.5-Coder-1.5B-Instruct | LLM  | Text Generation                          | ara_qwen            |
-| Qwen2.5-VL-3B-Instruct      | VLM  | Image-Text-to-Text                       | ara_qwen_image      |
-| Qwen2.5-VL-3B-Instruct      | VLM  | Video-Text-to-Text                       | ara_qwen_vl         |
-| Qwen2.5-VL-3B-Instruct      | VLM  | Image-Text-to-Text<br>Video-Text-to-Text | ara_qwen_multimodal |
-| Qwen2.5-VL-7B-Instruct      | VLM  | Image-Text-to-Text                       | ara_qwen_image      |
-| Qwen2.5-VL-7B-Instruct      | VLM  | Video-Text-to-Text                       | ara_qwen_vl         |
-| Qwen2.5-VL-7B-Instruct      | VLM  | Image-Text-to-Text<br>Video-Text-to-Text | ara_qwen_multimodal |
+| Model                       | Type | Task                                     | model_type          | NXP HF Hub |
+| :-------------------------- | :--- | :--------------------------------------- | :------------------ | :----------|
+| Qwen2.5-3B-Instruct         | LLM  | Text Generation                          | ara_qwen            |            |
+| Qwen2.5-7B-Instruct         | LLM  | Text Generation                          | ara_qwen            | [nxp/Qwen2.5-7B-Instruct-Ara240](https://huggingface.co/nxp/Qwen2.5-7B-Instruct-Ara240)          |
+| Qwen2.5-Coder-1.5B-Instruct | LLM  | Text Generation                          | ara_qwen            | [nxp/Qwen2.5-Coder-1.5B-Ara240](https://huggingface.co/nxp/Qwen2.5-Coder-1.5B-Ara240) |
+| Qwen2.5-VL-3B-Instruct      | VLM  | Image-Text-to-Text                       | ara_qwen_image      |            |
+| Qwen2.5-VL-3B-Instruct      | VLM  | Video-Text-to-Text                       | ara_qwen_vl         |            |
+| Qwen2.5-VL-3B-Instruct      | VLM  | Image-Text-to-Text<br>Video-Text-to-Text | ara_qwen_multimodal |            |
+| Qwen2.5-VL-7B-Instruct      | VLM  | Image-Text-to-Text                       | ara_qwen_image      | [nxp/Qwen2.5-VL-7B-Instruct-Ara240](https://huggingface.co/nxp/Qwen2.5-VL-7B-Instruct-Ara240)           |
+| Qwen2.5-VL-7B-Instruct      | VLM  | Video-Text-to-Text                       | ara_qwen_vl         |            |
+| Qwen2.5-VL-7B-Instruct      | VLM  | Image-Text-to-Text<br>Video-Text-to-Text | ara_qwen_multimodal |            |
 
 ### Qwen3 Family
 
@@ -100,11 +99,11 @@ The following models are integrated into the `optimum-ara` library:
    ```bash
    # For x86 platforms:
    cd $DV_TGT_ROOT/art/linux/x86/proxy/
-   # For aarch64 platforms:
-   cd $DV_TGT_ROOT/art/linux/aarch64f/proxy/
+   ./proxy_x86_64 -c ../../config/proxy_config.yaml
 
-   # Run the proxy
-   ./proxy -c ../../config/proxy_config.yaml
+   # For aarch64 platforms:
+   cd $DV_TGT_ROOT/art/linux/aarch64/proxy/
+   ./proxy_aarch64 -c ../../config/proxy_config.yaml
    ```
 
 ## Install Optimum Ara from Source
@@ -114,8 +113,8 @@ The following models are integrated into the `optimum-ara` library:
 Clone this repository in your target platform. You can choose the version to download. We recommend using `uv` for ease of use and faster installation than `pip`. To install `uv`, follow steps from [Installation | uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-# Below command fetches Optimum Ara v1.1.0. Change this version depending on the SDK you are using
-git clone https://github.com/NXP/Optimum-Ara.git -b v1.1.0
+# Below command fetches Optimum Ara v1.1.1. Change this version depending on the SDK you are using
+git clone https://github.com/NXP/Optimum-Ara.git -b v1.1.1
 cd optimum-ara
 
 # Create venv using uv:
@@ -146,7 +145,7 @@ uv pip install -e .
 
 ## Set up Optimum Ara in i.MX Platforms
 
-Optimum-Ara and Ara DNPU Runtime software stack is part of the official i.MX Embedded Linux BSP starting `LF6.18.20_2.0.0` (June 2026). Please check the Release Notes to see which i.MX platforms are supported. If you want to install the included Optimum-Ara wheel in your i.MX platform, follow the instructions below:
+Optimum-Ara and Ara DNPU Runtime software stack is part of the official i.MX Embedded Linux BSP starting `LF6.18.20_2.0.0` (June 2026). Please check the [Release Notes](https://docs.nxp.com/bundle/RN00543/page/topics/overview.html) to see which i.MX platforms are supported. If you want to install the included Optimum-Ara wheel in your i.MX platform, follow the instructions below:
 
 1. Flash the BSP to an i.MX platform that officially supports Ara240 DNPU. To get the officially released pre-built BSPs go to: [Embedded Linux for i.MX Applications Processors | NXP Semiconductors](https://www.nxp.com/design/design-center/software/embedded-software/i-mx-software/embedded-linux-for-i-mx-applications-processors:IMXLINUX). If you want to build your own BSP, please follow the instructions in [i.MX Yocto Project User's Guide](https://www.nxp.com/docs/en/user-guide/UG10164.pdf). To flash the BSP, follow the instructions in [i.MX Linux User's Guide](https://www.nxp.com/docs/en/user-guide/UG10163.pdf).
 
@@ -173,108 +172,13 @@ Optimum-Ara and Ara DNPU Runtime software stack is part of the official i.MX Emb
    uv pip install --no-progress /usr/share/python-wheels/optimum_ara-1.1.0-py3-none-any.whl
    ```
 
-## Run Example with Optimum-Ara
-
-This section shows you how to run an example using Optimum-Ara after installation. THis example uses `Qwen2.5-Coder-1.5B` model, fetched from [nxp/Qwen2.5-Coder-1.5B-Ara240](https://huggingface.co/nxp/Qwen2.5-Coder-1.5B-Ara240).
-
-1. Fetch the model from Hugging Face:
-
-   ```bash
-   uv run hf download nxp/Qwen2.5-Coder-1.5B-Ara240 --local-dir /usr/share/llm/Qwen2.5-Coder-1.5B
-   ```
-
-1. Create a Python script with below example code. You can name it something like `qwen2_5_coder_1.5b.py`:
-
-   > Note: You might need to change the `MODEL_PATH` and `TOKENIZER_PATH` to match your setup. This one works on i.MX platforms with the default BSP setup.
-
-   ```python
-   # Copyright 2026 NXP
-   # SPDX-License-Identifier: Apache-2.0
-
-   import os
-   import sys
-
-   from transformers import Qwen2TokenizerFast, AutoModelForCausalLM
-   import optimum.ara
-   from transformers import TextStreamer
-
-   MODEL_PATH = os.path.realpath("/usr/share/llm/Qwen2.5-Coder-1.5B")
-   TOKENIZER_PATH = "/usr/share/llm/Qwen2.5-Coder-1.5B/tokenizer"
-
-   INPUT_PROMPT = "Write a Python script that computes the factorial of a number."
-
-   tokenizer = Qwen2TokenizerFast.from_pretrained(TOKENIZER_PATH)
-   model = AutoModelForCausalLM.from_pretrained(MODEL_PATH)
-
-   messages = [
-       {"role": "system", "content": "You are a helpful python coding assistant."},
-       {"role": "user", "content": INPUT_PROMPT},
-   ]
-
-   inputs = tokenizer.apply_chat_template(
-       conversation=messages, tokenize=False, add_generation_prompt=True
-   )
-   inputs = tokenizer(inputs, return_tensors="pt")
-   streamer = TextStreamer(tokenizer, stream=sys.stdout)
-
-   print("\n" + "=" * 50)
-   print("USER PROMPT:")
-   print("=" * 50)
-   print(INPUT_PROMPT)
-   print("=" * 50 + "\n")
-
-   output = model.generate(**inputs, streamer=streamer, max_new_tokens=256)
-
-   del model
-   ```
-
-1. Run the example with below command:
-
-   ```bash
-   uv run qwen2_5_coder_1.5b.py
-   ```
-
-   ````plain
-   [2026-07-14 17:11:03] [INFO] [modeling_base.py:_get_llm_dvm_path] Found dvm_file, /usr/share/llm/Qwen2.5-Coder-1.5B/model.dvm
-   [INFO] - DVAPI: loaded dvinfclient lib: /usr/lib/libaraclient_aarch64.so
-   [2026-07-14 17:11:03] [INFO] [modeling_base.py:_handle_device_map] Model size: 1.73 GB, Additional required memory: 600.00 MB
-   [2026-07-14 17:11:03] [INFO] [modeling_base.py:_handle_device_map] Total size required for Model: 2.32 GB
-   [2026-07-14 17:11:03] [INFO] [modeling_base.py:_handle_device_map] Endpoint : 0 has free space : 15.77 GB
-   I:DVPULB[260714171103] model type is ara2 llm
-   I:DVPULB[260714171103] Successfully read llm_params_t from model file
-   I:DVPULB[260714171103] model found to be dyn quant v2 model
-
-   ==================================================
-   USER PROMPT:
-   ==================================================
-   Write a Python script that computes the factorial of a number.
-   ==================================================
-
-       ```python
-       def factorial(n):
-           # Base case: factorial of 0 or 1 is 1
-           if n == 0 or n == 1:
-               return 1
-           # Recursive case: n * factorial of (n-1)
-           else:
-               return n * factorial(n-1)
-
-       # Example usage
-       number = int(input("Enter a number to calculate its factorial: "))
-       result = factorial(number)
-       print(f"The factorial of {number} is {result}")
-       ```
-
-   In this solution, the `factorial` function calculates the factorial of a given number `n`. The function uses recursion to multiply each number from `n` down to `1`, effectively computing the product. The base cases are when `n` is either 0 or 1, in which case it returns 1. For all other values of `n`, it calls itself with `n-1`, multiplying the result by the current value of `n`. This recursive approach allows us to efficiently compute factorials without explicitly looping through all numbers up to and including that value.<|im_end|>
-   ````
-
 ## API Documentation
 
 Optimum Ara provides configuration and model classes inspired by Hugging Face Transformers.
 
 For more info check [API Documentation](./docs/optimum-ara-apis.md).
 
-## Examples
+## Run Example with Optimum-Ara
 
 Examples provide a quick way to start using Optimum Ara.
 
@@ -287,6 +191,7 @@ For more info check the [README.md](./examples/Readme.md) inside of `examples/`.
 | 1.0.0       | r2.1.1  | lf-6.18.20_2.0.0 | i.MX BSP Q2'26 Release |
 | 1.0.1       | r2.1.1  | -                | Hot fix release        |
 | 1.1.0       | r3.0    | lf-6.18.37_2.1.0 | i.MX BSP Q3'26 Release |
+| 1.1.1       | r3.0    | -                | Hot fix release        |
 
 ## License
 

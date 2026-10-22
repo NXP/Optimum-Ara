@@ -23,7 +23,7 @@ tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
 streamer = TextStreamer(tokenizer, stream=sys.stdout)
 
 while True:
-    INPUT_PROMPT = input("prompt : ")
+    INPUT_PROMPT = input ("prompt : ")
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": INPUT_PROMPT},
@@ -35,15 +35,13 @@ while True:
     inputs = tokenizer(inputs)
 
     generation_config = AraGenerationConfig.from_pretrained(MODEL_PATH)
-    output = model.generate(
-        **inputs, streamer=streamer, generation_config=generation_config
-    )
+    output = model.generate(**inputs, streamer=streamer, generation_config=generation_config)
     generated_text = tokenizer.decode(output[0])
 
-    print("\n" + "=" * 50)
+    print("\n" + "="*50)
     print("GENERATED TEXT:")
-    print("=" * 50)
+    print("="*50)
     print(generated_text)
-    print("=" * 50)
+    print("="*50)
 
 del model

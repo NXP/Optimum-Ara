@@ -24,7 +24,6 @@ from .configuration_qwen3_vl import (
 )
 from .processing_qwen3_vl import Qwen3VLProcessor
 
-
 class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
     config_class = AraQwen3VLConfig
 
@@ -33,7 +32,9 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
         self.PATCHES_ALONG_WIDTH = 12
         self.PATCH_SIZE = 16
         self.NUM_FRAMES = kwargs.pop("NUM_FRAMES", 16)
-        self.NUM_TKNS_PER_FRAME = self.PATCHES_ALONG_HEIGHT * self.PATCHES_ALONG_WIDTH
+        self.NUM_TKNS_PER_FRAME = (
+            self.PATCHES_ALONG_HEIGHT * self.PATCHES_ALONG_WIDTH
+        )
         is_image_model = kwargs.pop("is_image_model", False)
         super().__init__(*args, **kwargs, is_image_model=is_image_model)
 
@@ -41,62 +42,47 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
         logging.debug("qwen3-vl _load_vision_model_inputs called!")
         # load rope_table
         rope_table_path = getattr(self.config.ara, "rope_table_path", None)
-        assert rope_table_path, "Need to pass an input file for input scale path"
-        assert os.path.exists(rope_table_path), (
-            f"Provided path for rope table does not exist -> {rope_table_path}"
-        )
-
-        self.rope_table = np.fromfile(rope_table_path, dtype=np.int8)
+        assert (
+            rope_table_path
+        ), "Need to pass an input file for input scale path"
+        assert (
+            os.path.exists(rope_table_path)
+        ), f"Provided path for rope table does not exist -> {rope_table_path}"
+        
+        self.rope_table =  np.fromfile(rope_table_path, dtype=np.int8)
         logging.info(f"Loaded rope table from the following path: {rope_table_path}")
 
         # load vision_pos_table
         vision_pos_table_path = getattr(self.config.ara, "vision_pos_table_path", None)
-        assert vision_pos_table_path, "Need to pass vision_pos_table_path"
-        assert os.path.exists(vision_pos_table_path), (
-            f"Provided path for vision_pos_table_path does not exist -> {vision_pos_table_path}"
-        )
-
-        self.vision_pos_table = np.fromfile(vision_pos_table_path, dtype=np.int8)
-        logging.info(
-            f"Loaded vision_pos_table from the following path: {vision_pos_table_path}"
-        )
+        assert (
+            vision_pos_table_path
+        ), "Need to pass vision_pos_table_path"
+        assert (
+            os.path.exists(vision_pos_table_path)
+        ), f"Provided path for vision_pos_table_path does not exist -> {vision_pos_table_path}"
+        
+        self.vision_pos_table =  np.fromfile(vision_pos_table_path, dtype=np.int8)
+        logging.info(f"Loaded vision_pos_table from the following path: {vision_pos_table_path}")
 
         # load vision_pos_table_scale
-        vision_pos_table_scale_path = getattr(
-            self.config.ara, "vision_pos_table_scale_path", None
-        )
-        assert vision_pos_table_scale_path, "Need to pass vision_pos_table_scale_path"
-        assert os.path.exists(vision_pos_table_scale_path), (
-            f"Provided path for vision_pos_table_scale_path does not exist -> {vision_pos_table_scale_path}"
-        )
-
-        self.vision_pos_table_scale = np.fromfile(
-            vision_pos_table_scale_path, dtype=np.int8
-        )
-        logging.info(
-            f"Loaded vision_pos_table_scale_path from the following path: {vision_pos_table_scale_path}"
-        )
-
+        vision_pos_table_scale_path = getattr(self.config.ara, "vision_pos_table_scale_path", None)
+        assert (
+            vision_pos_table_scale_path
+        ), "Need to pass vision_pos_table_scale_path"
+        assert (
+            os.path.exists(vision_pos_table_scale_path)
+        ), f"Provided path for vision_pos_table_scale_path does not exist -> {vision_pos_table_scale_path}"
+        
+        self.vision_pos_table_scale =  np.fromfile(vision_pos_table_scale_path, dtype=np.int8)
+        logging.info(f"Loaded vision_pos_table_scale_path from the following path: {vision_pos_table_scale_path}")
+    
         # pyrefly: ignore [bad-override]
-
     def prepare_inputs_for_generation(
         self,
         input_ids: Union[torch.LongTensor, np.ndarray],
         past_key_values: Optional[Any] = None,
         attention_mask: Optional[torch.LongTensor] = None,
-        inputs_embeds: Optional[
-            Tuple[torch.Tensor, torch.Tensor]
-            | Tuple[
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-            ]
-        ] = None,
+        inputs_embeds: Optional[Tuple[torch.Tensor,torch.Tensor] | Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor]] = None,
         cache_position: Optional[torch.LongTensor] = None,
         generation_config: Optional[AraGenerationConfig] = None,
         **kwargs,
@@ -109,14 +95,14 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
             # We are likely called from AraModelForCausalLM.generate with token IDs
             # Delegate to AraModelForCausalLM's implementation
             return super(AraModelForVisualCausalLM, self).prepare_inputs_for_generation(
-                input_ids=input_ids,
-                past_key_values=past_key_values,
-                attention_mask=attention_mask,
-                inputs_embeds=inputs_embeds,
-                cache_position=cache_position,
-                generation_config=generation_config,
-                **kwargs,
-            )
+                 input_ids=input_ids,
+                 past_key_values=past_key_values,
+                 attention_mask=attention_mask,
+                 inputs_embeds=inputs_embeds,
+                 cache_position=cache_position,
+                 generation_config=generation_config,
+                 **kwargs
+             )
 
         """
         Prepare input/output arrays in the same format used by the generic VLM path
@@ -133,41 +119,31 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
             zero_embed = torch.zeros_like(inputs_embeds[0])
             zero_embed_scale = torch.zeros_like(inputs_embeds[1])
             # append dummy ds0,1,2 to input
-            inputs_embeds = inputs_embeds + (
-                zero_embed,
-                zero_embed_scale,
-                zero_embed,
-                zero_embed_scale,
-                zero_embed,
-                zero_embed_scale,
-            )
+            inputs_embeds = inputs_embeds + (zero_embed, zero_embed_scale, zero_embed, zero_embed_scale, zero_embed, zero_embed_scale)
+
 
         # raw_pad_token_id = getattr(self.config, "pad_token_id", 0)
         # pad_token_id = 0 if raw_pad_token_id is None else int(raw_pad_token_id)
         pad_token_id = self.core.get_pad_token_id()
-
+        
         # Ensure input_ids is a tensor for size checks
-        input_ids_tensor = (
-            input_ids
-            if isinstance(input_ids, torch.Tensor)
-            else torch.from_numpy(np.array(input_ids))
-        )
-
+        input_ids_tensor = input_ids if isinstance(input_ids, torch.Tensor) else torch.from_numpy(np.array(input_ids))
+        
         token_ids = (
-            torch.nn.functional.pad(
-                input_ids_tensor.squeeze(0),
-                (0, int(num_max_tokens - input_ids_tensor.size(1))),
-                value=pad_token_id,
+                torch.nn.functional.pad(
+                    input_ids_tensor.squeeze(0),
+                    (0, int(num_max_tokens - input_ids_tensor.size(1))),
+                    value=pad_token_id,
+                )
+                .cpu()
+                .numpy()
+                .astype(np.int32)
+                .view(np.int8)
             )
-            .cpu()
-            .numpy()
-            .astype(np.int32)
-            .view(np.int8)
-        )
         input_array = token_ids
 
         # append embedding to input
-        for i in range(0, len(inputs_embeds), 2):
+        for i in range(0,len(inputs_embeds), 2):
             embeds = inputs_embeds[i]
 
             valid_tokens = embeds.shape[1]
@@ -179,19 +155,17 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
                 f"Expected ({num_max_tokens * embedding_dim}), got {embeds.shape}"
             )
 
-            input_array = np.concatenate(
-                (
-                    input_array,
-                    embeds.cpu().numpy().flatten(),
-                )
-            )
+            input_array = np.concatenate((
+                input_array,
+                embeds.cpu().numpy().flatten(), 
+            ))
         # append embedding scales to input
-        for i in range(0, len(inputs_embeds), 2):
-            embeds_scales = inputs_embeds[i + 1]
+        for i in range(0,len(inputs_embeds), 2):
+            embeds_scales = inputs_embeds[i+1]
 
-            scales_padding_amt = ((num_max_tokens * embedding_dim) // 64) - (
-                embeds_scales.shape[1] * embeds_scales.shape[2]
-            )
+            scales_padding_amt = (
+                (num_max_tokens * embedding_dim) // 64
+            ) - (embeds_scales.shape[1] * embeds_scales.shape[2]) 
 
             embeds_scales = torch.nn.functional.pad(
                 embeds_scales.flatten(), (0, scales_padding_amt), value=0
@@ -200,52 +174,45 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
                 f"Expected ({num_max_tokens * embedding_dim // 64}), got {embeds_scales.shape}"
             )
 
-            input_array = np.concatenate(
-                (input_array, embeds_scales.cpu().numpy().flatten())
-            )
+            input_array = np.concatenate((
+                input_array,
+                embeds_scales.cpu().numpy().flatten()
+            ))
 
-        output_array = np.zeros((self.core.get_vocab_size() * 4), dtype=np.int32)
+
+        output_array = np.zeros(
+            (self.core.get_vocab_size() * 4), dtype=np.int32
+        )
 
         return {
             "input_array": input_array,
             "output_array": output_array,
         }
-
+    
     # Qwen3-VL requires handling of 4 inputs instead of one
     # pyrefly: ignore [bad-override]
     def merge_multi_modal_features(
-        self,
-        input_ids: torch.Tensor,
-        feature_embeds: Tuple[
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-            torch.Tensor,
-        ],
+        self, 
+        input_ids: torch.Tensor, 
+        feature_embeds: Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor], 
         text_embeds: Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
-        vision_token_id,  # TODO: type?
+        vision_token_id #TODO: type?
     ):
         """Merge multi-modal features."""
         n_video_tokens = (input_ids == vision_token_id).sum().item()
         n_video_features = feature_embeds[0].shape[0]
 
         if n_video_tokens != n_video_features:
-            unique_tokens = torch.unique(input_ids)
-            possible_image_tokens = [
-                t for t in unique_tokens.tolist() if t > vision_token_id
-            ]
-            error_msg = (
-                f"Video features and video tokens do not match:\n"
-                f"  Expected token ID: {vision_token_id}\n"
-                f"  Found {n_video_tokens} occurrences in input_ids\n"
-                f"  But have {n_video_features} vision features\n"
-                f"  Possible image tokens (>32000): {possible_image_tokens}"
-            )
-            raise ValueError(error_msg)
+                unique_tokens = torch.unique(input_ids)
+                possible_image_tokens = [t for t in unique_tokens.tolist() if t > vision_token_id]
+                error_msg = (
+                    f"Video features and video tokens do not match:\n"
+                    f"  Expected token ID: {vision_token_id}\n"
+                    f"  Found {n_video_tokens} occurrences in input_ids\n"
+                    f"  But have {n_video_features} vision features\n"
+                    f"  Possible image tokens (>32000): {possible_image_tokens}"
+                )
+                raise ValueError(error_msg)
 
         video_output = feature_embeds[0]
         video_output_scale = feature_embeds[1]
@@ -301,70 +268,31 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
             mask_unsqueezed, video_ds2_features_scale, zero_embeds_scales
         )
 
-        return (
-            video_output_embeds,
-            video_output_scale_embeds,
-            video_ds0_features_embeds,
-            video_ds0_features_scale_embeds,
-            video_ds1_features_embeds,
-            video_ds1_features_scale_embeds,
-            video_ds2_features_embeds,
-            video_ds2_features_scale_embeds,
-        )
+        return (video_output_embeds, video_output_scale_embeds, 
+                video_ds0_features_embeds, video_ds0_features_scale_embeds, 
+                video_ds1_features_embeds, video_ds1_features_scale_embeds, 
+                video_ds2_features_embeds, video_ds2_features_scale_embeds)
 
-    def _vision_inference(self, inp_scale, inp):
+    def _vision_inference(self, inp_scale, inp) :
         input_tensors = []
 
         input_tensors.append(self.core.get_dv_tensor(self.rope_table, params=None))
         input_tensors.append(self.core.get_dv_tensor(inp, params=None))
         input_tensors.append(self.core.get_dv_tensor(inp_scale, params=None))
-        input_tensors.append(
-            self.core.get_dv_tensor(self.vision_pos_table, params=None)
-        )
-        input_tensors.append(
-            self.core.get_dv_tensor(self.vision_pos_table_scale, params=None)
-        )
+        input_tensors.append(self.core.get_dv_tensor(self.vision_pos_table, params=None))
+        input_tensors.append(self.core.get_dv_tensor(self.vision_pos_table_scale, params=None))
 
-        ds0_features: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8
-        )
-        ds0_features_scale: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64,
-            dtype=np.int8,
-        )
-        ds1_features: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8
-        )
-        ds1_features_scale: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64,
-            dtype=np.int8,
-        )
-        ds2_features: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8
-        )
-        ds2_features_scale: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64,
-            dtype=np.int8,
-        )
-        vision_output: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8
-        )
-        vision_output_scale: np.ndarray = np.zeros(
-            self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64,
-            dtype=np.int8,
-        )
+        ds0_features: np.ndarray        = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8)
+        ds0_features_scale: np.ndarray  = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64, dtype=np.int8)
+        ds1_features: np.ndarray        = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8)
+        ds1_features_scale: np.ndarray  = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64, dtype=np.int8)
+        ds2_features: np.ndarray        = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8)
+        ds2_features_scale: np.ndarray  = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64, dtype=np.int8)
+        vision_output: np.ndarray       = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size(), dtype=np.int8)
+        vision_output_scale: np.ndarray = np.zeros(self.NUM_TKNS_PER_FRAME * self.core.get_embedding_size() // 64, dtype=np.int8)
 
-        outputs = [
-            ds0_features,
-            ds0_features_scale,
-            ds1_features,
-            ds1_features_scale,
-            ds2_features,
-            ds2_features_scale,
-            vision_output,
-            vision_output_scale,
-        ]
-
+        outputs = [ds0_features, ds0_features_scale, ds1_features, ds1_features_scale, ds2_features, ds2_features_scale, vision_output, vision_output_scale]
+        
         output_tensors = []
         for op in outputs:
             output_tensors.append(self.core.get_dv_tensor(op, params=None))
@@ -374,16 +302,7 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
             output_tensors=output_tensors,
         )
 
-        return (
-            vision_output,
-            vision_output_scale,
-            ds0_features,
-            ds0_features_scale,
-            ds1_features,
-            ds1_features_scale,
-            ds2_features,
-            ds2_features_scale,
-        )
+        return (vision_output, vision_output_scale, ds0_features, ds0_features_scale, ds1_features, ds1_features_scale, ds2_features, ds2_features_scale)
 
     def decode_tokens(self, token_ids: np.ndarray) -> str:
         """
@@ -397,11 +316,13 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
             token_embeddings = self.embedding(token_tensor)
             decoded_text = f"Generated {len(token_ids)} tokens with embeddings shape {token_embeddings.shape}"
             return decoded_text
-
+            
         except Exception as e:
             return f"Generated {len(token_ids)} tokens (decoding failed)"
 
-    def vision_inference(self, vision_inputs: torch.Tensor, num_frames: int):
+    def vision_inference(
+        self, vision_inputs: torch.Tensor, num_frames: int
+    ) :
         logging.debug(f"Qwen3-vl vision_inference called!")
         video_output = []
         video_output_scale = []
@@ -412,7 +333,7 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
         video_ds2_features = []
         video_ds2_features_scale = []
         vision_inputs_np = vision_inputs.cpu().detach().numpy()
-        #
+        # 
 
         logging.debug(f"num_frames : {num_frames}")
         for i in range(num_frames // 2):
@@ -421,58 +342,28 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
                 * (self.NUM_TKNS_PER_FRAME * 4)
             ]
 
-            inp_scale, inp = Qwen3VLProcessor.quantize(torch.from_numpy(pixel_values))
-
-            (
-                vision_output,
-                vision_output_scale,
-                ds0_features,
-                ds0_features_scale,
-                ds1_features,
-                ds1_features_scale,
-                ds2_features,
-                ds2_features_scale,
-            ) = self._vision_inference(inp_scale, inp)
-
-            vision_output = vision_output.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size(),
+            
+            inp_scale, inp = Qwen3VLProcessor.quantize(
+                torch.from_numpy(pixel_values)
             )
-            vision_output_scale = vision_output_scale.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size() // 64,
-            )
+
+            vision_output, vision_output_scale, ds0_features, ds0_features_scale, ds1_features, ds1_features_scale, ds2_features, ds2_features_scale = self._vision_inference(inp_scale, inp)
+            
+            vision_output = vision_output.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size(),)
+            vision_output_scale = vision_output_scale.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size() // 64,)
 
             # --- DS0 Features ---
-            ds0_features = ds0_features.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size(),
-            )
-            ds0_features_scale = ds0_features_scale.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size() // 64,
-            )
+            ds0_features = ds0_features.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size(),)
+            ds0_features_scale = ds0_features_scale.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size() // 64,)
 
             # --- DS1 Features ---
-            ds1_features = ds1_features.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size(),
-            )
-            ds1_features_scale = ds1_features_scale.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size() // 64,
-            )
+            ds1_features = ds1_features.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size(),)
+            ds1_features_scale = ds1_features_scale.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size() // 64,)
 
             # --- DS2 Features ---
-            ds2_features = ds2_features.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size(),
-            )
-            ds2_features_scale = ds2_features_scale.reshape(
-                self.NUM_TKNS_PER_FRAME,
-                self.core.get_embedding_size() // 64,
-            )
-
+            ds2_features = ds2_features.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size(),)
+            ds2_features_scale = ds2_features_scale.reshape(self.NUM_TKNS_PER_FRAME,self.core.get_embedding_size() // 64,)
+            
             video_output.append(torch.from_numpy(vision_output))
             video_output_scale.append(torch.from_numpy(vision_output_scale))
             video_ds0_features.append(torch.from_numpy(ds0_features))
@@ -483,10 +374,9 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
             video_ds2_features_scale.append(torch.from_numpy(ds2_features_scale))
 
         if not video_output:
-            raise RuntimeError(
-                f"Vision inference resulted in 0 features. Check num_frames ({num_frames}) and input shape."
-            )
+             raise RuntimeError(f"Vision inference resulted in 0 features. Check num_frames ({num_frames}) and input shape.")
 
+        
         video_output = torch.cat(video_output, dim=0)
         video_output_scale = torch.cat(video_output_scale, dim=0)
         video_ds0_features = torch.cat(video_ds0_features, dim=0)
@@ -496,23 +386,12 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
         video_ds2_features = torch.cat(video_ds2_features, dim=0)
         video_ds2_features_scale = torch.cat(video_ds2_features_scale, dim=0)
 
-        return (
-            video_output,
-            video_output_scale,
-            video_ds0_features,
-            video_ds0_features_scale,
-            video_ds1_features,
-            video_ds1_features_scale,
-            video_ds2_features,
-            video_ds2_features_scale,
-        )
-
+        return (video_output, video_output_scale, video_ds0_features, video_ds0_features_scale, video_ds1_features, video_ds1_features_scale, video_ds2_features, video_ds2_features_scale)
+    
     def generate(
         self,
         inputs: Optional[torch.Tensor] = None,
-        generation_config: Optional[
-            Union[GenerationConfig, AraGenerationConfig]
-        ] = None,
+        generation_config: Optional[Union[GenerationConfig, AraGenerationConfig]] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Any] = None,
@@ -523,9 +402,9 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
         use_model_defaults: Optional[bool] = None,
         custom_generate: Optional[Union[str, Callable]] = None,
-        **kwargs,
+        **kwargs
     ) -> Union[GenerateDecoderOnlyOutput, torch.LongTensor, Any]:
-
+        
         # Hardcoding system prompt is not required for qwen3-vl at the moment.
         return super().generate(
             inputs,
@@ -542,11 +421,9 @@ class AraQwen3VLForConditionalGeneration(AraModelForVisualCausalLM):
             custom_generate,
             **kwargs,
         )
-
-
+    
 class AraQwen3ImageForConditionalGeneration(AraQwen3VLForConditionalGeneration):
     config_class = AraQwen3ImageConfig
-
     def __init__(self, *args, **kwargs):
         is_image_model = True
 

@@ -13,7 +13,7 @@ if not os.path.exists(sdk_root):
     sdk_root = os.environ.get("DV_TGT_ROOT")
     if not sdk_root:
         raise EnvironmentError(
-            "Default SDK path does not exist and DV_TGT_ROOT environment variable not set"
+            f"Default SDK path {sdk_root} does not exist and DV_TGT_ROOT environment variable not set"
         )
 
 # Detect platform architecture
@@ -24,7 +24,7 @@ elif machine in ["aarch64", "arm64"]:
     arch = "aarch64"
 else:
     raise EnvironmentError(
-        f"Unsupported architecture: {machine}. Only x86_64 and aarch64 are supported."
+        f"Unsupported architecture: {machine}. Only x86_64, amd64, arm64 and aarch64 are supported."
     )
 
 # dvapi.py lives at one of two layouts:

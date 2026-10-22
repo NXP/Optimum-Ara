@@ -11,10 +11,7 @@ import typing_extensions
 from transformers import Qwen2_5_VLProcessor as _Qwen2_5_VLProcessor
 from transformers.processing_utils import AllKwargsForChatTemplate
 
-try:
-    from typing import Unpack
-except ImportError:
-    from typing_extensions import Unpack
+from typing_extensions import Unpack
 
 
 class ExtendedChatTemplateKwargs(AllKwargsForChatTemplate, total=False):
@@ -296,15 +293,15 @@ class QwenVLProcessor:
                 text=[text],
                 images=cast(List[Any], image_inputs),
                 videos=cast(List[Any], video_inputs),
-                padding=True,  # pyrefly: ignore [unexpected-keyword]
-                return_tensors="pt",  # pyrefly: ignore [unexpected-keyword]
+                padding=True, # pyrefly: ignore [unexpected-keyword]
+                return_tensors="pt", # pyrefly: ignore [unexpected-keyword]
                 **video_kwargs,
             )
         else:
             inputs = self.processor(
                 text=[text],
-                padding=True,  # pyrefly: ignore [unexpected-keyword]
-                return_tensors="pt",  # pyrefly: ignore [unexpected-keyword]
+                padding=True, # pyrefly: ignore [unexpected-keyword]
+                return_tensors="pt", # pyrefly: ignore [unexpected-keyword]
             )
 
         return inputs

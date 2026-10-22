@@ -22,6 +22,7 @@ An example Whisper usage script is provided at [here](../../examples/whisper.py)
 
 The model uses the same single-model architecture as llama2 & llama3:
 
+
 ## Hardware Requirements
 
 - Ara hardware with DVM support

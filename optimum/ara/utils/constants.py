@@ -10,6 +10,4 @@ DEFAULT_IP_ADDRESS = "127.0.0.1"
 DEFAULT_NAMED_PIPE = "//./pipe/proxy_pipe"
 DEFAULT_PORT = 5000
 DVM_DDR_BASE_ADDR = 0x90000000
-ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL = (
-    600 * 1024 * 1024
-)  # 600 MB addition memory requird (rough estimate)
+ADDITION_SPACE_REQUIRED_TO_LOAD_MODEL = 600 * 1024 * 1024  # 600 MB addition memory requird (rough estimate)

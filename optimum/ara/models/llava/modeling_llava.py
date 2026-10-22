@@ -58,15 +58,13 @@ class AraLlavaForConditionalGeneration(AraModelForVisualCausalLM):
 
     def _vision_inference(self, pixel_values_inflated: np.ndarray) -> list:
         input_tensors = []
-        input_tensors.append(
-            self.core.get_dv_tensor(pixel_values_inflated, params=None)
-        )
+        input_tensors.append(self.core.get_dv_tensor(pixel_values_inflated, params=None))
         for const_array in self.quantization_constants:
             input_tensors.append(self.core.get_dv_tensor(const_array, params=None))
 
         # Use llm_params values instead of hardcoded constants
         embedding_size = self.core.get_embedding_size()
-
+        
         # Get number of image tokens - use cached value if available, otherwise from config
         # This will be computed dynamically on first inference if not set
         if self._num_image_tokens is None:
@@ -76,10 +74,7 @@ class AraLlavaForConditionalGeneration(AraModelForVisualCausalLM):
             self._num_image_tokens = 576
 
             # Try to get from config
-            if (
-                hasattr(self.config, "num_image_tokens")
-                and self.config.num_image_tokens
-            ):
+            if hasattr(self.config, "num_image_tokens") and self.config.num_image_tokens:
                 self._num_image_tokens = self.config.num_image_tokens
 
         embedding_output = np.empty(
@@ -106,9 +101,7 @@ class AraLlavaForConditionalGeneration(AraModelForVisualCausalLM):
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
 
         if num_frames > 1:
-            raise RuntimeError(
-                f"Ara Llava only support one image, provided num_frames = {num_frames}"
-            )
+            raise RuntimeError(f"Ara Llava only support one image, provided num_frames = {num_frames}")
 
         # Handle both LLaVA (4D: batch, C, H, W) and LLaVA-Next (5D: batch, tiles, C, H, W)
         if vision_inputs.dim() == 5:
@@ -131,7 +124,7 @@ class AraLlavaForConditionalGeneration(AraModelForVisualCausalLM):
 
         # Compute number of image tokens dynamically from actual output size
         num_image_tokens = frame_embeds.size // embedding_size
-
+        
         # Cache the computed value
         if self._num_image_tokens != num_image_tokens:
             self._num_image_tokens = num_image_tokens

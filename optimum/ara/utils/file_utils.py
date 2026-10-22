@@ -1,4 +1,3 @@
-# Copyright 2022 The HuggingFace Team. All rights reserved.
 # Copyright (c) 2025, Kinara, Inc. All rights reserved.
 # Copyright 2025-2026 NXP
 # SPDX-License-Identifier: Apache-2.0
@@ -51,18 +50,26 @@ def find_files_matching_pattern(
         if isinstance(model_name_or_path, Path)
         else model_name_or_path
     )
-    logging.info(f"Searching for DVM file in Dir : {model_path}")
-    regex_pattern: Pattern[str] = re.compile(subfolder + pattern)
+    logging.info(
+                    f"Searching for DVM file in Dir : {model_path}"
+                )
+    regex_pattern: Pattern[str] = re.compile((subfolder or "") + pattern)
 
-    logging.info(f"Searching for regex_pattern : {regex_pattern}")
+    logging.info(
+                    f"Searching for regex_pattern : {regex_pattern}"
+                )
 
     if os.path.isdir(model_path):
         files = Path(model_path).glob(glob_pattern)
         files = [p for p in files if re.search(regex_pattern, str(p))]
-        logging.info(f"Searching for regex_pattern : {files}")
+        logging.info(
+                    f"Searching for regex_pattern : {files}"
+                )
     elif os.path.isfile(model_path) and re.search(regex_pattern, str(model_path)):
         files = [Path(model_path)]
-        logging.info(f"Searching for regex_pattern : {files}")
+        logging.info(
+                    f"Searching for regex_pattern : {files}"
+                )
     else:
         raise FileNotFoundError(f"DVM Model not found at {model_path}")
 

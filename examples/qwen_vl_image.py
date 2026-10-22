@@ -18,7 +18,9 @@ from optimum.ara import (
 # Configuration
 IMAGE_PATH = "examples/assets/test.jpg"
 PROMPT = "Describe this image briefly"
-MODEL_PATH = "models/qwen2.5-image-3B"
+MODEL_PATH = (
+    "models/qwen2.5-image-3B"
+)
 
 
 processor = Qwen2_5_VLProcessor.from_pretrained("Qwen/Qwen2.5-VL-7B-Instruct")
@@ -47,9 +49,7 @@ messages = [
 ]
 
 # Preparation for inference
-text = processor.apply_chat_template(
-    messages, tokenize=False, add_generation_prompt=True
-)
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 print(text)
 image_inputs, video_inputs, _ = process_vision_info(messages, return_video_kwargs=True)
 if image_inputs is None:
@@ -71,16 +71,14 @@ result = model.generate(
     max_new_tokens=512,
     temperature=1.0,
     do_sample=False,
-    streamer=streamer,
+    streamer=streamer
 )
 
 if isinstance(result, GenerateDecoderOnlyOutput):
     result = result.sequences
 
 # Decode the generated tokens to text
-generated_text = cast(Qwen2_5_VLProcessor, processor).decode(
-    result.flatten(), skip_special_tokens=True
-)  # type: ignore
+generated_text = cast(Qwen2_5_VLProcessor, processor).decode(result.flatten(), skip_special_tokens=True)  # type: ignore
 
 print("\n" + "=" * 50)
 print("GENERATED TEXT:")
