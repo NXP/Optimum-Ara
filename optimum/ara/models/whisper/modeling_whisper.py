@@ -1,4 +1,6 @@
-# Copyright (c) 2025-2026, Kinara, Inc. All rights reserved.
+# Copyright (c) 2025, Kinara, Inc. All rights reserved.
+# Copyright 2025-2026 NXP
+# SPDX-License-Identifier: Apache-2.0
 
 from ...modeling_seq2seq import AraModelForSpeechSeq2Seq
 from .configuration_whisper import AraWhisperConfig
