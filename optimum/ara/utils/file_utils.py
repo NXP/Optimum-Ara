@@ -1,3 +1,4 @@
+# Copyright 2022 The HuggingFace Team. All rights reserved.
 # Copyright (c) 2025, Kinara, Inc. All rights reserved.
 # Copyright 2025-2026 NXP
 # SPDX-License-Identifier: Apache-2.0
