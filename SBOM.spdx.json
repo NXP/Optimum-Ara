@@ -2,20 +2,20 @@
   "SPDXID": "SPDXRef-DOCUMENT",
   "spdxVersion": "SPDX-2.3",
   "creationInfo": {
-    "created": "2026-08-24T17:36:22Z",
+    "created": "2026-11-20T08:56:25Z",
     "creators": [
       "Organization: NXP"
     ],
     "licenseListVersion": "3.28"
   },
-  "name": "optimum-ara-1.1.0",
+  "name": "optimum-ara-1.1.1",
   "dataLicense": "CC0-1.0",
-  "documentNamespace": "https://nxp.com/spdx/a0b67ef5-41d2-4ac5-ba3a-634257daf811",
+  "documentNamespace": "https://nxp.com/spdx/60a184cc-cbc0-4450-a303-ccfcc4f152ab",
   "packages": [
     {
-      "SPDXID": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811",
+      "SPDXID": "SPDXRef-package-60a184cc-cbc0-4450-a303-ccfcc4f152ab",
       "name": "optimum-ara",
-      "versionInfo": "1.1.0",
+      "versionInfo": "1.1.1",
       "licenseConcluded": "(Apache-2.0)",
       "licenseDeclared": "(Apache-2.0)",
       "downloadLocation": "https://github.com/NXP/Optimum-Ara",
@@ -25,7 +25,7 @@
       "filesAnalyzed": false
     },
     {
-      "SPDXID": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811---750f5739-545d-427b-a358-e9f32a19e08e",
+      "SPDXID": "SPDXRef-package-750f5739-545d-427b-a358-e9f32a19e08e",
       "name": "huggingface/optimum",
       "versionInfo": "v2.1.0",
       "licenseConcluded": "Apache-2.0",
@@ -52,12 +52,12 @@
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
       "relationshipType": "DESCRIBES",
-      "relatedSpdxElement": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811"
+      "relatedSpdxElement": "SPDXRef-package-60a184cc-cbc0-4450-a303-ccfcc4f152ab"
     },
     {
-      "spdxElementId": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811",
+      "spdxElementId": "SPDXRef-package-60a184cc-cbc0-4450-a303-ccfcc4f152ab",
       "relationshipType": "CONTAINS",
-      "relatedSpdxElement": "SPDXRef-package-a0b67ef5-41d2-4ac5-ba3a-634257daf811---750f5739-545d-427b-a358-e9f32a19e08e"
+      "relatedSpdxElement": "SPDXRef-package-750f5739-545d-427b-a358-e9f32a19e08e"
     }
   ]
 }
